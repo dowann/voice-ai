@@ -179,6 +179,12 @@ let waitingForTranslation = false;
 let translateBuffer = [];
 let feedbackPlaying = false;
 
+function cancelSpeech() {
+  speechSynthesis.cancel();
+  feedbackPlaying = false;
+  ttsPlaying = false;
+}
+
 // --- Wake Lock (keep screen on) ---
 async function requestWakeLock() {
   try {
@@ -310,7 +316,7 @@ function setSpeed(s) {
 }
 
 function speakSentence(text, idx, rate) {
-  speechSynthesis.cancel();
+  cancelSpeech();
   const st = spokenText(text, idx);
   const u = new SpeechSynthesisUtterance(st);
   u.lang = 'en-US'; u.rate = rate || speed;
@@ -330,7 +336,7 @@ function spokenText(text, idx) {
 
 function playAll() {
   if (!curSentences.length) return;
-  speechSynthesis.cancel();
+  cancelSpeech();
   ttsPlaying = true;
   let i = 0;
   function next() {
@@ -348,7 +354,7 @@ function playAll() {
 // --- Slow Start (2초 후 천천히 전체 재생) ---
 function slowStart() {
   if (!curSentences.length) { voiceFeedback('No sentences.'); return; }
-  speechSynthesis.cancel(); speaking = false;
+  cancelSpeech(); speaking = false;
   voiceFeedback('Complete.');
   setTimeout(() => {
     ttsPlaying = true;
@@ -376,7 +382,7 @@ function voiceFeedback(text) {
   feedbackPlaying = true;
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'en-US'; u.rate = 1; u.volume = 0.6;
-  u.onend = () => { feedbackPlaying = false; };
+  u.onend = () => { feedbackPlaying = false; if (listening && !waitingForTranslation && !waitingForQuestion && !waitingForPhoto) setStatus('🔒 대기 중...', true); };
   speechSynthesis.speak(u);
 }
 
@@ -403,12 +409,12 @@ function checkTranslateCmd(text) {
 }
 
 function runTranslateCmd(cmd) {
-  if (cmd === 'startTranslate') { speechSynthesis.cancel(); speaking = false; translateBuffer = []; setStatus('🎤 한국어로 말하세요... "끝" 하면 번역', true); const r = new SpeechSynthesisUtterance('Ready.'); r.lang = 'en-US'; r.rate = 1; r.volume = 0.6; r.onend = () => { waitingForTranslation = true; }; speechSynthesis.speak(r); return; }
+  if (cmd === 'startTranslate') { cancelSpeech(); speaking = false; translateBuffer = []; setStatus('🎤 한국어로 말하세요... "끝" 하면 번역', true); const r = new SpeechSynthesisUtterance('Ready.'); r.lang = 'en-US'; r.rate = 1; r.volume = 0.6; r.onend = () => { waitingForTranslation = true; }; speechSynthesis.speak(r); return; }
   if (cmd === 'switchAI') { if (listening) toggleMic(); switchMode('ai'); voiceFeedback('AI mode.'); setTimeout(() => toggleMic(), 1000); return; }
   if (cmd === 'switchPhoto') { if (listening) toggleMic(); switchMode('photo'); voiceFeedback('Photo mode.'); setTimeout(() => toggleMic(), 1000); return; }
   if (cmd === 'replay') { const i = curIdx >= 0 ? curIdx : curSentences.length - 1; if (curSentences[i]) speakSentence(curSentences[i], i); }
   else if (cmd === 'next') { const i = curIdx + 1; if (curSentences[i]) speakSentence(curSentences[i], i); }
-  else if (cmd === 'stop') { speechSynthesis.cancel(); speaking = false; updateActive(); voiceFeedback('Complete.'); stopCount++; if (stopTimer) clearTimeout(stopTimer); stopTimer = setTimeout(() => { stopCount = 0; }, 5000); if (stopCount >= 3) { stopCount = 0; clearAll(); voiceFeedback('Cleared.'); return; } }
+  else if (cmd === 'stop') { cancelSpeech(); speaking = false; updateActive(); voiceFeedback('Complete.'); stopCount++; if (stopTimer) clearTimeout(stopTimer); stopTimer = setTimeout(() => { stopCount = 0; }, 5000); if (stopCount >= 3) { stopCount = 0; clearAll(); voiceFeedback('Cleared.'); return; } }
   else if (cmd === 'clear') { clearAll(); voiceFeedback('Complete.'); }
   else if (cmd === 'slow') { setSpeed(0.6); voiceFeedback('Complete.'); }
   else if (cmd === 'normal') { setSpeed(0.9); voiceFeedback('Complete.'); }
@@ -451,7 +457,7 @@ function renderTranslation() {
 }
 
 function removeTranslation(i) {
-  if (i === curIdx) { speechSynthesis.cancel(); speaking = false; }
+  if (i === curIdx) { cancelSpeech(); speaking = false; }
   translateSentences.splice(i, 1);
   curSentences = translateSentences.map(s => s.en);
   if (curIdx >= curSentences.length) curIdx = curSentences.length - 1;
@@ -486,14 +492,14 @@ function checkAICmd(text) {
 function runAICmd(cmd) {
   if (cmd === 'switchTranslate') { if (listening) toggleMic(); switchMode('translate'); voiceFeedback('Translate mode.'); setTimeout(() => toggleMic(), 1000); return; }
   if (cmd === 'switchPhoto') { if (listening) toggleMic(); switchMode('photo'); voiceFeedback('Photo mode.'); setTimeout(() => toggleMic(), 1000); return; }
-  if (cmd === 'ask') { speechSynthesis.cancel(); speaking = false; questionBuffer = []; setStatus('🎤 영어로 질문하세요... "done" 하면 전송', true); const r = new SpeechSynthesisUtterance('Ready.'); r.lang = 'en-US'; r.rate = 1; r.volume = 0.6; r.onend = () => { waitingForQuestion = true; if (listening && recognition) { recognition.stop(); recognition.lang = 'en-US'; try { recognition.start(); } catch {} } }; speechSynthesis.speak(r); return; }
-  if (cmd === 'retry') { voiceFeedback('Complete.'); if (lastQuestion) { speechSynthesis.cancel(); speaking = false; if (conversationHistory.length >= 2) { conversationHistory.pop(); conversationHistory.pop(); } askClaude(lastQuestion); } return; }
+  if (cmd === 'ask') { cancelSpeech(); speaking = false; questionBuffer = []; setStatus('🎤 영어로 질문하세요... "done" 하면 전송', true); const r = new SpeechSynthesisUtterance('Ready.'); r.lang = 'en-US'; r.rate = 1; r.volume = 0.6; r.onend = () => { waitingForQuestion = true; if (listening && recognition) { recognition.stop(); recognition.lang = 'en-US'; try { recognition.start(); } catch {} } }; speechSynthesis.speak(r); return; }
+  if (cmd === 'retry') { voiceFeedback('Complete.'); if (lastQuestion) { cancelSpeech(); speaking = false; if (conversationHistory.length >= 2) { conversationHistory.pop(); conversationHistory.pop(); } askClaude(lastQuestion); } return; }
   if (cmd === 'more') { voiceFeedback('Complete.'); if (lastQuestion) { moreAnswer(); } return; }
   if (cmd === 'another') { voiceFeedback('Complete.'); if (lastQuestion) { anotherAnswer(); } return; }
   if (cmd === 'slowstart') { slowStart(); return; }
   if (cmd === 'replay') { const i = curIdx >= 0 ? curIdx : curSentences.length - 1; if (curSentences[i]) speakSentence(curSentences[i], i); }
   else if (cmd === 'next') { const i = curIdx + 1; if (curSentences[i]) speakSentence(curSentences[i], i); }
-  else if (cmd === 'stop') { speechSynthesis.cancel(); speaking = false; updateActive(); voiceFeedback('Complete.'); stopCount++; if (stopTimer) clearTimeout(stopTimer); stopTimer = setTimeout(() => { stopCount = 0; }, 5000); if (stopCount >= 3) { stopCount = 0; clearAll(); voiceFeedback('Cleared.'); return; } }
+  else if (cmd === 'stop') { cancelSpeech(); speaking = false; updateActive(); voiceFeedback('Complete.'); stopCount++; if (stopTimer) clearTimeout(stopTimer); stopTimer = setTimeout(() => { stopCount = 0; }, 5000); if (stopCount >= 3) { stopCount = 0; clearAll(); voiceFeedback('Cleared.'); return; } }
   else if (cmd === 'clear') { clearAll(); voiceFeedback('Complete.'); }
   else if (cmd === 'slow') { setSpeed(0.6); voiceFeedback('Complete.'); }
   else if (cmd === 'normal') { setSpeed(0.9); voiceFeedback('Complete.'); }
@@ -534,16 +540,16 @@ function checkPhotoCmd(text) {
 }
 
 function runPhotoCmd(cmd) {
-  if (cmd === 'startPhoto') { speechSynthesis.cancel(); speaking = false; photoBuffer = []; setStatus('🎤 키워드를 말하세요... "끝" 하면 설명 생성', true); const r = new SpeechSynthesisUtterance('Ready.'); r.lang = 'en-US'; r.rate = 1; r.volume = 0.6; r.onend = () => { waitingForPhoto = true; }; speechSynthesis.speak(r); return; }
+  if (cmd === 'startPhoto') { cancelSpeech(); speaking = false; photoBuffer = []; setStatus('🎤 키워드를 말하세요... "끝" 하면 설명 생성', true); const r = new SpeechSynthesisUtterance('Ready.'); r.lang = 'en-US'; r.rate = 1; r.volume = 0.6; r.onend = () => { waitingForPhoto = true; }; speechSynthesis.speak(r); return; }
   if (cmd === 'switchTranslate') { if (listening) toggleMic(); switchMode('translate'); voiceFeedback('Translate mode.'); setTimeout(() => toggleMic(), 1000); return; }
   if (cmd === 'switchAI') { if (listening) toggleMic(); switchMode('ai'); voiceFeedback('AI mode.'); setTimeout(() => toggleMic(), 1000); return; }
-  if (cmd === 'retry') { if (lastPhotoKeywords) { speechSynthesis.cancel(); speaking = false; voiceFeedback('Complete.'); askPhotoDescription(lastPhotoKeywords); } return; }
+  if (cmd === 'retry') { if (lastPhotoKeywords) { cancelSpeech(); speaking = false; voiceFeedback('Complete.'); askPhotoDescription(lastPhotoKeywords); } return; }
   if (cmd === 'more') { if (lastPhotoKeywords) { voiceFeedback('Complete.'); morePhotoDescription(); } return; }
   if (cmd === 'another') { if (lastPhotoKeywords) { voiceFeedback('Complete.'); anotherPhotoDescription(); } return; }
   if (cmd === 'slowstart') { slowStart(); return; }
   if (cmd === 'replay') { const i = curIdx >= 0 ? curIdx : curSentences.length - 1; if (curSentences[i]) speakSentence(curSentences[i], i); }
   else if (cmd === 'next') { const i = curIdx + 1; if (curSentences[i]) speakSentence(curSentences[i], i); }
-  else if (cmd === 'stop') { speechSynthesis.cancel(); speaking = false; updateActive(); voiceFeedback('Complete.'); stopCount++; if (stopTimer) clearTimeout(stopTimer); stopTimer = setTimeout(() => { stopCount = 0; }, 5000); if (stopCount >= 3) { stopCount = 0; clearAll(); voiceFeedback('Cleared.'); return; } }
+  else if (cmd === 'stop') { cancelSpeech(); speaking = false; updateActive(); voiceFeedback('Complete.'); stopCount++; if (stopTimer) clearTimeout(stopTimer); stopTimer = setTimeout(() => { stopCount = 0; }, 5000); if (stopCount >= 3) { stopCount = 0; clearAll(); voiceFeedback('Cleared.'); return; } }
   else if (cmd === 'clear') { clearAll(); voiceFeedback('Complete.'); }
   else if (cmd === 'slow') { setSpeed(0.6); voiceFeedback('Complete.'); }
   else if (cmd === 'normal') { setSpeed(0.9); voiceFeedback('Complete.'); }
@@ -577,7 +583,7 @@ async function askPhotoDescription(keywords) {
 
 async function morePhotoDescription() {
   if (!apiKey || !lastPhotoKeywords) return;
-  speechSynthesis.cancel(); speaking = false;
+  cancelSpeech(); speaking = false;
   setStatus('Adding more...', true);
   const startNum = curSentences.length + 1;
   conversationHistory.push({ role: 'user', content: 'Continue describing the picture with 5 MORE sentences starting from number ' + startNum + '. Add more details about the scene, mood, or other things you notice.' });
@@ -611,7 +617,7 @@ async function morePhotoDescription() {
 
 async function anotherPhotoDescription() {
   if (!apiKey || !lastPhotoKeywords) return;
-  speechSynthesis.cancel(); speaking = false;
+  cancelSpeech(); speaking = false;
   setStatus('Different description...', true);
   conversationHistory = [{ role: 'user', content: lastPhotoKeywords + ' (Describe this picture COMPLETELY DIFFERENTLY from before. Use different focus, different order, different details.)' }];
   try {
@@ -633,7 +639,7 @@ async function anotherPhotoDescription() {
 
 async function moreAnswer() {
   if (!apiKey || !lastQuestion) return;
-  speechSynthesis.cancel(); speaking = false;
+  cancelSpeech(); speaking = false;
   setStatus('Getting more...', true);
   const startNum = curSentences.length + 1;
   conversationHistory.push({ role: 'user', content: 'Continue your answer about "' + lastQuestion + '" with 5 MORE sentences starting from number ' + startNum + '. Same rules: simple words, direct answer only, include at least one example.' });
@@ -672,7 +678,7 @@ async function moreAnswer() {
 
 async function anotherAnswer() {
   if (!apiKey || !lastQuestion) return;
-  speechSynthesis.cancel(); speaking = false;
+  cancelSpeech(); speaking = false;
   // Remove last Q&A
   if (conversationHistory.length >= 2) { conversationHistory.pop(); conversationHistory.pop(); }
   conversationHistory.push({ role: 'user', content: lastQuestion + ' (Give me a COMPLETELY DIFFERENT answer from before. Different perspective, different examples.)' });
@@ -747,7 +753,7 @@ function updateActive() {
 }
 
 function clearAll() {
-  speechSynthesis.cancel(); speaking = false; ttsPlaying = false; feedbackPlaying = false; curSentences = []; curIdx = -1;
+  cancelSpeech(); speaking = false; ttsPlaying = false; feedbackPlaying = false; curSentences = []; curIdx = -1;
   conversationHistory = []; translateSentences = []; waitingForQuestion = false; lastQuestion = ''; questionBuffer = []; waitingForTranslation = false; translateBuffer = []; waitingForPhoto = false; photoBuffer = []; lastPhotoKeywords = '';
   stopCount = 0;
   document.getElementById('conversation').innerHTML = '';
@@ -785,7 +791,7 @@ function toggleMic() {
       if (ttsPlaying) {
         const t = text.trim();
         if (['stop','pause','멈춰','그만','정지'].includes(t) || t.includes('멈춰') || t.includes('그만') || t.includes('정지')) {
-          speechSynthesis.cancel(); speaking = false; ttsPlaying = false; updateActive();
+          cancelSpeech(); speaking = false; ttsPlaying = false; updateActive();
           stopCount++;
           if (stopTimer) clearTimeout(stopTimer);
           stopTimer = setTimeout(() => { stopCount = 0; }, 5000);
@@ -814,7 +820,7 @@ function toggleMic() {
           return;
         }
         const cmd = checkTranslateCmd(text);
-        if (cmd) { runTranslateCmd(cmd); if (!waitingForTranslation) setStatus('🔒 대기 중...', true); }
+        if (cmd) { runTranslateCmd(cmd); }
         else { setStatus('❌ "' + esc(text) + '" — 명령어 아님', false); }
       } else if (mode === 'ai') {
         if (waitingForQuestion) {
@@ -842,7 +848,7 @@ function toggleMic() {
           return;
         }
         const cmd = checkAICmd(text);
-        if (cmd) { runAICmd(cmd); if (!waitingForQuestion) setStatus('🔒 대기 중...', true); }
+        if (cmd) { runAICmd(cmd); }
         else { setStatus('❌ "' + esc(text) + '" — 명령어 아님', false); }
       } else if (mode === 'photo') {
         if (waitingForPhoto) {
@@ -866,7 +872,7 @@ function toggleMic() {
           return;
         }
         const cmd = checkPhotoCmd(text);
-        if (cmd) { runPhotoCmd(cmd); if (!waitingForPhoto) setStatus('🔒 대기 중...', true); }
+        if (cmd) { runPhotoCmd(cmd); }
         else { setStatus('❌ "' + esc(text) + '" — 명령어 아님', false); }
       }
     }
