@@ -134,7 +134,11 @@
   </div>
   <div id="keySection">
     <input type="password" id="apiKey" placeholder="Anthropic API Key (sk-ant-...)" oninput="saveKey()">
-    <div class="hint">Key is stored in memory only — never sent anywhere except Anthropic</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;">
+      <input type="checkbox" id="saveKeyCheck" onchange="toggleSaveKey()" style="width:14px;height:14px;">
+      <label for="saveKeyCheck" style="font-size:10px;color:#52525b;cursor:pointer;">키 저장 (이 브라우저에만)</label>
+    </div>
+    <div class="hint">키는 Anthropic 서버로만 전송됩니다</div>
   </div>
   <div id="status">Tap mic to start</div>
   <div class="speed-bar">
@@ -234,7 +238,29 @@ updateCmds();
 function saveKey() {
   apiKey = document.getElementById('apiKey').value.trim();
   if (apiKey.startsWith('sk-ant-')) document.getElementById('keySection').style.opacity = '0.4';
+  if (document.getElementById('saveKeyCheck').checked && apiKey) {
+    localStorage.setItem('voice-ai-key', apiKey);
+  }
 }
+
+function toggleSaveKey() {
+  if (document.getElementById('saveKeyCheck').checked) {
+    if (apiKey) localStorage.setItem('voice-ai-key', apiKey);
+  } else {
+    localStorage.removeItem('voice-ai-key');
+  }
+}
+
+function loadSavedKey() {
+  const saved = localStorage.getItem('voice-ai-key');
+  if (saved) {
+    apiKey = saved;
+    document.getElementById('apiKey').value = saved;
+    document.getElementById('saveKeyCheck').checked = true;
+    document.getElementById('keySection').style.opacity = '0.4';
+  }
+}
+loadSavedKey();
 
 function setStatus(text, on) {
   const el = document.getElementById('status');
