@@ -310,8 +310,8 @@ function setSpeed(s) {
 
 function speakSentence(text, idx, rate) {
   speechSynthesis.cancel();
-  const spokenText = 'Number ' + (idx + 1) + '. ' + text;
-  const u = new SpeechSynthesisUtterance(spokenText);
+  const st = spokenText(text, idx);
+  const u = new SpeechSynthesisUtterance(st);
   u.lang = 'en-US'; u.rate = rate || speed;
   const voices = speechSynthesis.getVoices();
   const v = voices.find(v => v.lang.startsWith('en') && v.name.includes('Samantha'))
@@ -323,6 +323,10 @@ function speakSentence(text, idx, rate) {
   speechSynthesis.speak(u);
 }
 
+function spokenText(text, idx) {
+  return mode === 'photo' ? text : 'Number ' + (idx + 1) + '. ' + text;
+}
+
 function playAll() {
   if (!curSentences.length) return;
   speechSynthesis.cancel();
@@ -331,7 +335,7 @@ function playAll() {
   function next() {
     if (i >= curSentences.length) { speaking = false; ttsPlaying = false; updateActive(); return; }
     const idx = i;
-    const u = new SpeechSynthesisUtterance('Number ' + (idx + 1) + '. ' + curSentences[i]);
+    const u = new SpeechSynthesisUtterance(spokenText(curSentences[i], idx));
     u.lang = 'en-US'; u.rate = speed;
     u.onstart = () => { speaking = true; curIdx = idx; updateActive(); };
     u.onend = () => { i++; next(); };
@@ -351,7 +355,7 @@ function slowStart() {
     function next() {
       if (i >= curSentences.length) { speaking = false; ttsPlaying = false; updateActive(); return; }
       const idx = i;
-      const u = new SpeechSynthesisUtterance('Number ' + (idx + 1) + '. ' + curSentences[i]);
+      const u = new SpeechSynthesisUtterance(spokenText(curSentences[i], idx));
       u.lang = 'en-US'; u.rate = 0.6;
       const voices = speechSynthesis.getVoices();
       const v = voices.find(v => v.lang.startsWith('en') && v.name.includes('Samantha'))
@@ -536,7 +540,7 @@ function runPhotoCmd(cmd) {
   else if (cmd.startsWith('play:')) { const i = parseInt(cmd.split(':')[1]); if (curSentences[i]) speakSentence(curSentences[i], i); }
 }
 
-const PHOTO_SYSTEM = 'You describe photos in English based on Korean keywords the user provides. Rules: 1) Write a natural, fluent English description as if you are describing the photo to someone who cannot see it. 2) Use simple, everyday English words. 3) Write EXACTLY 5-7 sentences, about 30 seconds when read aloud. 4) Do NOT say "Based on the keywords" or mention that you received keywords. Describe it as if you are looking at the actual photo. 5) Be vivid and natural. Describe people, their appearance, actions, background, mood, and atmosphere.';
+const PHOTO_SYSTEM = 'You describe pictures in English based on Korean keywords the user provides. Rules: 1) The FIRST sentence MUST describe the location or setting. If keywords include a place, start with "This picture was taken at..." or "It was taken in...". If no specific place is mentioned, simply start with "In this picture," 2) Use simple, everyday English words. 3) Write EXACTLY 5-7 sentences, about 30 seconds when read aloud. 4) Do NOT say "Based on the keywords" or mention that you received keywords. Describe it as if you are looking at the actual picture. 5) Be vivid and natural. Focus especially on describing ACTIONS clearly — what people are doing, their gestures, body language, and interactions with each other. Use action verbs like "holding", "pointing at", "leaning against", "laughing with", "looking at" etc. Also describe appearance, background, and mood.';
 
 async function askPhotoDescription(keywords) {
   if (!apiKey) { setStatus('Enter API key first', false); return; }
@@ -564,7 +568,7 @@ async function morePhotoDescription() {
   speechSynthesis.cancel(); speaking = false;
   setStatus('Adding more...', true);
   const startNum = curSentences.length + 1;
-  conversationHistory.push({ role: 'user', content: 'Continue describing the photo with 5 MORE sentences starting from number ' + startNum + '. Add more details about the scene, mood, or other things you notice.' });
+  conversationHistory.push({ role: 'user', content: 'Continue describing the picture with 5 MORE sentences starting from number ' + startNum + '. Add more details about the scene, mood, or other things you notice.' });
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -582,7 +586,7 @@ async function morePhotoDescription() {
     let i = curSentences.length - newSentences.length;
     function playNew() {
       if (i >= curSentences.length) { speaking = false; ttsPlaying = false; updateActive(); return; }
-      const u = new SpeechSynthesisUtterance('Number ' + (i + 1) + '. ' + curSentences[i]);
+      const u = new SpeechSynthesisUtterance(spokenText(curSentences[i], i));
       u.lang = 'en-US'; u.rate = speed;
       const idx = i;
       u.onstart = () => { speaking = true; curIdx = idx; updateActive(); };
@@ -597,7 +601,7 @@ async function anotherPhotoDescription() {
   if (!apiKey || !lastPhotoKeywords) return;
   speechSynthesis.cancel(); speaking = false;
   setStatus('Different description...', true);
-  conversationHistory = [{ role: 'user', content: lastPhotoKeywords + ' (Describe this photo COMPLETELY DIFFERENTLY from before. Use different focus, different order, different details.)' }];
+  conversationHistory = [{ role: 'user', content: lastPhotoKeywords + ' (Describe this picture COMPLETELY DIFFERENTLY from before. Use different focus, different order, different details.)' }];
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -643,7 +647,7 @@ async function moreAnswer() {
     let i = curSentences.length - newSentences.length;
     function playNew() {
       if (i >= curSentences.length) { speaking = false; ttsPlaying = false; updateActive(); return; }
-      const u = new SpeechSynthesisUtterance('Number ' + (i + 1) + '. ' + curSentences[i]);
+      const u = new SpeechSynthesisUtterance(spokenText(curSentences[i], i));
       u.lang = 'en-US'; u.rate = speed;
       const idx = i;
       u.onstart = () => { speaking = true; curIdx = idx; updateActive(); };
