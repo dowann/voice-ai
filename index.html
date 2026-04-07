@@ -356,7 +356,7 @@ function slowStart() {
       if (i >= curSentences.length) { speaking = false; ttsPlaying = false; updateActive(); return; }
       const idx = i;
       const u = new SpeechSynthesisUtterance(spokenText(curSentences[i], idx));
-      u.lang = 'en-US'; u.rate = 0.6;
+      u.lang = 'en-US'; u.rate = (mode === 'photo' && i === 0) ? speed : 0.6;
       const voices = speechSynthesis.getVoices();
       const v = voices.find(v => v.lang.startsWith('en') && v.name.includes('Samantha'))
         || voices.find(v => v.lang === 'en-US')
