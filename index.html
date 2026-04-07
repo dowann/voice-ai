@@ -177,6 +177,7 @@ let ttsPlaying = false;
 let questionBuffer = [];
 let waitingForTranslation = false;
 let translateBuffer = [];
+let feedbackPlaying = false;
 
 // --- Wake Lock (keep screen on) ---
 async function requestWakeLock() {
@@ -372,19 +373,31 @@ function slowStart() {
 
 // --- Voice feedback ---
 function voiceFeedback(text) {
+  feedbackPlaying = true;
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'en-US'; u.rate = 1; u.volume = 0.6;
+  u.onend = () => { feedbackPlaying = false; };
   speechSynthesis.speak(u);
 }
 
 // ---- TRANSLATE ----
 function checkTranslateCmd(text) {
-  const t = text.trim();
-  if (['번역','번역하기'].includes(t)) return 'startTranslate';
-  const map = { '다시':'replay','한번 더':'replay','다음':'next','멈춰':'stop','그만':'stop','정지':'stop','리셋':'clear','느리게':'slow','천천히':'slow','보통':'normal','빠르게':'fast','빨리':'fast','전체 재생':'playall','전체재생':'playall','다 들려줘':'playall','에이아이 모드':'switchAI','AI 모드':'switchAI','사진 모드':'switchPhoto','사진모드':'switchPhoto' };
+  const t = text.trim().replace(/\s+/g, ' ');
+  if (t.includes('에이아이') || t.includes('AI')) return 'switchAI';
+  if (t.includes('사진 모드') || t.includes('사진모드')) return 'switchPhoto';
+  if (t.includes('번역')) return 'startTranslate';
+  const map = { '다시':'replay','한번 더':'replay','다음':'next','멈춰':'stop','그만':'stop','정지':'stop','리셋':'clear','느리게':'slow','천천히':'slow','보통':'normal','빠르게':'fast','빨리':'fast','전체 재생':'playall','전체재생':'playall','다 들려줘':'playall' };
   if (map[t]) return map[t];
-  if (t.toLowerCase().includes('ai mode') || t.toLowerCase().includes('ai 모드')) return 'switchAI';
-  const m = t.match(/^(\d+)\s*번/);
+  // flexible matching
+  if (t.includes('다시')) return 'replay';
+  if (t.includes('다음')) return 'next';
+  if (t.includes('멈춰') || t.includes('그만') || t.includes('정지')) return 'stop';
+  if (t.includes('리셋')) return 'clear';
+  if (t.includes('느리') || t.includes('천천')) return 'slow';
+  if (t === '보통') return 'normal';
+  if (t.includes('빠르') || t.includes('빨리')) return 'fast';
+  if (t.includes('전체') || t.includes('다 들려')) return 'playall';
+  const m = t.match(/(\d+)\s*번/);
   if (m) return 'play:' + (parseInt(m[1]) - 1);
   return null;
 }
@@ -448,25 +461,24 @@ function removeTranslation(i) {
 
 // ---- AI ----
 function checkAICmd(text) {
-  const t = text.trim();
-  const tl = t.toLowerCase();
-  // Korean commands
-  if (['질문'].includes(t)) return 'ask';
-  if (['번역 모드','번역모드'].includes(t)) return 'switchTranslate';
-  if (['사진 모드','사진모드'].includes(t)) return 'switchPhoto';
-  if (['다시','한번 더','리플레이'].includes(t)) return 'replay';
-  if (t === '다음') return 'next';
-  if (['멈춰','그만','정지'].includes(t)) return 'stop';
-  if (['리셋'].includes(t)) return 'clear';
-  if (['느리게','천천히'].includes(t)) return 'slow';
-  if (t === '보통') return 'normal';
-  if (['빠르게','빨리'].includes(t)) return 'fast';
-  if (['전체 재생','전체재생','다 들려줘'].includes(t)) return 'playall';
-  if (['스타트','시작'].includes(t)) return 'slowstart';
-  if (['다시 질문','재질문','리트라이'].includes(t)) return 'retry';
+  const t = text.trim().replace(/\s+/g, ' ');
+  if (t.includes('번역 모드') || t.includes('번역모드')) return 'switchTranslate';
+  if (t.includes('사진 모드') || t.includes('사진모드')) return 'switchPhoto';
+  if (t.includes('스타트') || t === '시작') return 'slowstart';
+  if (t.includes('재질문') || t.includes('다시 질문') || t.includes('리트라이')) return 'retry';
   if (t.includes('더 답변') || t.includes('추가 답변') || t.includes('더 말해')) return 'more';
   if (t.includes('다른 답변') || t.includes('다르게')) return 'another';
-  const m = t.match(/^(\d+)\s*번/);
+  if (t.includes('질문')) return 'ask';
+  if (t.includes('한번 더') || t.includes('리플레이')) return 'replay';
+  if (t.includes('다시')) return 'replay';
+  if (t.includes('다음')) return 'next';
+  if (t.includes('멈춰') || t.includes('그만') || t.includes('정지')) return 'stop';
+  if (t.includes('리셋')) return 'clear';
+  if (t.includes('느리') || t.includes('천천')) return 'slow';
+  if (t === '보통') return 'normal';
+  if (t.includes('빠르') || t.includes('빨리')) return 'fast';
+  if (t.includes('전체') || t.includes('다 들려')) return 'playall';
+  const m = t.match(/(\d+)\s*번/);
   if (m) return 'play:' + (parseInt(m[1]) - 1);
   return null;
 }
@@ -500,23 +512,23 @@ let photoBuffer = [];
 let lastPhotoKeywords = '';
 
 function checkPhotoCmd(text) {
-  const t = text.trim();
-  if (['사진','사진 설명','설명'].includes(t)) return 'startPhoto';
-  if (['번역 모드','번역모드'].includes(t)) return 'switchTranslate';
-  if (['에이아이 모드','AI 모드'].includes(t)) return 'switchAI';
-  if (['다시','한번 더'].includes(t)) return 'replay';
-  if (t === '다음') return 'next';
-  if (['멈춰','그만','정지'].includes(t)) return 'stop';
-  if (['리셋'].includes(t)) return 'clear';
-  if (['느리게','천천히'].includes(t)) return 'slow';
-  if (t === '보통') return 'normal';
-  if (['빠르게','빨리'].includes(t)) return 'fast';
-  if (['전체 재생','전체재생','다 들려줘'].includes(t)) return 'playall';
-  if (['스타트','시작'].includes(t)) return 'slowstart';
-  if (['재설명'].includes(t)) return 'retry';
+  const t = text.trim().replace(/\s+/g, ' ');
+  if (t.includes('번역 모드') || t.includes('번역모드')) return 'switchTranslate';
+  if (t.includes('에이아이') || t.includes('AI')) return 'switchAI';
+  if (t.includes('사진')) return 'startPhoto';
+  if (t.includes('스타트') || t === '시작') return 'slowstart';
+  if (t.includes('재설명')) return 'retry';
   if (t.includes('더 설명') || t.includes('추가 설명')) return 'more';
   if (t.includes('다른 설명') || t.includes('다르게')) return 'another';
-  const m = t.match(/^(\d+)\s*번/);
+  if (t.includes('다시') || t.includes('한번 더')) return 'replay';
+  if (t.includes('다음')) return 'next';
+  if (t.includes('멈춰') || t.includes('그만') || t.includes('정지')) return 'stop';
+  if (t.includes('리셋')) return 'clear';
+  if (t.includes('느리') || t.includes('천천')) return 'slow';
+  if (t === '보통') return 'normal';
+  if (t.includes('빠르') || t.includes('빨리')) return 'fast';
+  if (t.includes('전체') || t.includes('다 들려')) return 'playall';
+  const m = t.match(/(\d+)\s*번/);
   if (m) return 'play:' + (parseInt(m[1]) - 1);
   return null;
 }
@@ -735,7 +747,7 @@ function updateActive() {
 }
 
 function clearAll() {
-  speechSynthesis.cancel(); speaking = false; ttsPlaying = false; curSentences = []; curIdx = -1;
+  speechSynthesis.cancel(); speaking = false; ttsPlaying = false; feedbackPlaying = false; curSentences = []; curIdx = -1;
   conversationHistory = []; translateSentences = []; waitingForQuestion = false; lastQuestion = ''; questionBuffer = []; waitingForTranslation = false; translateBuffer = []; waitingForPhoto = false; photoBuffer = []; lastPhotoKeywords = '';
   stopCount = 0;
   document.getElementById('conversation').innerHTML = '';
@@ -763,10 +775,16 @@ function toggleMic() {
       const text = last[0].transcript.trim();
       if (!text) return;
       
+      // Ignore speech during voice feedback
+      if (feedbackPlaying) return;
+      
+      // Show what was recognized
+      setStatus('🎙 "' + esc(text) + '"', true);
+      
       // During TTS, only accept stop commands
       if (ttsPlaying) {
-        const t = text.toLowerCase().trim();
-        if (['stop','pause','멈춰','그만','정지'].includes(t)) {
+        const t = text.trim();
+        if (['stop','pause','멈춰','그만','정지'].includes(t) || t.includes('멈춰') || t.includes('그만') || t.includes('정지')) {
           speechSynthesis.cancel(); speaking = false; ttsPlaying = false; updateActive();
           stopCount++;
           if (stopTimer) clearTimeout(stopTimer);
@@ -797,7 +815,7 @@ function toggleMic() {
         }
         const cmd = checkTranslateCmd(text);
         if (cmd) { runTranslateCmd(cmd); if (!waitingForTranslation) setStatus('🔒 대기 중...', true); }
-        else { voiceFeedback('Command not recognized.'); setStatus('🔒 대기 중...', true); }
+        else { setStatus('❌ "' + esc(text) + '" — 명령어 아님', false); }
       } else if (mode === 'ai') {
         if (waitingForQuestion) {
           const tl = text.toLowerCase().trim();
@@ -825,7 +843,7 @@ function toggleMic() {
         }
         const cmd = checkAICmd(text);
         if (cmd) { runAICmd(cmd); if (!waitingForQuestion) setStatus('🔒 대기 중...', true); }
-        else { voiceFeedback('Command not recognized.'); setStatus('🔒 대기 중...', true); }
+        else { setStatus('❌ "' + esc(text) + '" — 명령어 아님', false); }
       } else if (mode === 'photo') {
         if (waitingForPhoto) {
           const cleaned = text.replace(/끝$/,'').replace(/끝이요$/,'').replace(/끝이에요$/,'').trim();
@@ -849,7 +867,7 @@ function toggleMic() {
         }
         const cmd = checkPhotoCmd(text);
         if (cmd) { runPhotoCmd(cmd); if (!waitingForPhoto) setStatus('🔒 대기 중...', true); }
-        else { voiceFeedback('Command not recognized.'); setStatus('🔒 대기 중...', true); }
+        else { setStatus('❌ "' + esc(text) + '" — 명령어 아님', false); }
       }
     }
   };
