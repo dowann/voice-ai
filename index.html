@@ -409,7 +409,7 @@ function checkTranslateCmd(text) {
 }
 
 function runTranslateCmd(cmd) {
-  if (cmd === 'startTranslate') { cancelSpeech(); speaking = false; translateBuffer = []; setStatus('🎤 한국어로 말하세요... "끝" 하면 번역', true); const r = new SpeechSynthesisUtterance('Ready.'); r.lang = 'en-US'; r.rate = 1; r.volume = 0.6; r.onend = () => { waitingForTranslation = true; }; speechSynthesis.speak(r); return; }
+  if (cmd === 'startTranslate') { cancelSpeech(); speaking = false; translateBuffer = []; waitingForTranslation = true; setStatus('🎤 한국어로 말하세요... "끝" 하면 번역', true); voiceFeedback('Ready.'); return; }
   if (cmd === 'switchAI') { if (listening) toggleMic(); switchMode('ai'); voiceFeedback('AI mode.'); setTimeout(() => toggleMic(), 1000); return; }
   if (cmd === 'switchPhoto') { if (listening) toggleMic(); switchMode('photo'); voiceFeedback('Photo mode.'); setTimeout(() => toggleMic(), 1000); return; }
   if (cmd === 'replay') { const i = curIdx >= 0 ? curIdx : curSentences.length - 1; if (curSentences[i]) speakSentence(curSentences[i], i); }
@@ -492,7 +492,7 @@ function checkAICmd(text) {
 function runAICmd(cmd) {
   if (cmd === 'switchTranslate') { if (listening) toggleMic(); switchMode('translate'); voiceFeedback('Translate mode.'); setTimeout(() => toggleMic(), 1000); return; }
   if (cmd === 'switchPhoto') { if (listening) toggleMic(); switchMode('photo'); voiceFeedback('Photo mode.'); setTimeout(() => toggleMic(), 1000); return; }
-  if (cmd === 'ask') { cancelSpeech(); speaking = false; questionBuffer = []; setStatus('🎤 영어로 질문하세요... "done" 하면 전송', true); const r = new SpeechSynthesisUtterance('Ready.'); r.lang = 'en-US'; r.rate = 1; r.volume = 0.6; r.onend = () => { waitingForQuestion = true; if (listening && recognition) { recognition.stop(); recognition.lang = 'en-US'; try { recognition.start(); } catch {} } }; speechSynthesis.speak(r); return; }
+  if (cmd === 'ask') { cancelSpeech(); speaking = false; questionBuffer = []; waitingForQuestion = true; if (listening && recognition) { recognition.stop(); recognition.lang = 'en-US'; try { recognition.start(); } catch {} } setStatus('🎤 영어로 질문하세요... "done" 하면 전송', true); voiceFeedback('Ready.'); return; }
   if (cmd === 'retry') { voiceFeedback('Complete.'); if (lastQuestion) { cancelSpeech(); speaking = false; if (conversationHistory.length >= 2) { conversationHistory.pop(); conversationHistory.pop(); } askClaude(lastQuestion); } return; }
   if (cmd === 'more') { voiceFeedback('Complete.'); if (lastQuestion) { moreAnswer(); } return; }
   if (cmd === 'another') { voiceFeedback('Complete.'); if (lastQuestion) { anotherAnswer(); } return; }
@@ -540,7 +540,7 @@ function checkPhotoCmd(text) {
 }
 
 function runPhotoCmd(cmd) {
-  if (cmd === 'startPhoto') { cancelSpeech(); speaking = false; photoBuffer = []; setStatus('🎤 키워드를 말하세요... "끝" 하면 설명 생성', true); const r = new SpeechSynthesisUtterance('Ready.'); r.lang = 'en-US'; r.rate = 1; r.volume = 0.6; r.onend = () => { waitingForPhoto = true; }; speechSynthesis.speak(r); return; }
+  if (cmd === 'startPhoto') { cancelSpeech(); speaking = false; photoBuffer = []; waitingForPhoto = true; setStatus('🎤 키워드를 말하세요... "끝" 하면 설명 생성', true); voiceFeedback('Ready.'); return; }
   if (cmd === 'switchTranslate') { if (listening) toggleMic(); switchMode('translate'); voiceFeedback('Translate mode.'); setTimeout(() => toggleMic(), 1000); return; }
   if (cmd === 'switchAI') { if (listening) toggleMic(); switchMode('ai'); voiceFeedback('AI mode.'); setTimeout(() => toggleMic(), 1000); return; }
   if (cmd === 'retry') { if (lastPhotoKeywords) { cancelSpeech(); speaking = false; voiceFeedback('Complete.'); askPhotoDescription(lastPhotoKeywords); } return; }
