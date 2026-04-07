@@ -15,21 +15,31 @@
     display: flex; flex-direction: column; align-items: center;
   }
   .wrap { max-width: 540px; width: 100%; }
-  .header { text-align: center; margin-bottom: 24px; }
+  .header { text-align: center; margin-bottom: 20px; }
   .header small { font-size: 9px; letter-spacing: 0.35em; text-transform: uppercase; color: #3f3f46; }
   .header h1 { font-size: 19px; font-weight: 500; color: #e4e4e7; margin-top: 5px; }
-
-  /* API Key */
-  #keySection { margin-bottom: 24px; }
+  .mode-bar {
+    display: flex; justify-content: center; gap: 0; margin-bottom: 20px;
+    background: rgba(255,255,255,0.03); border-radius: 12px; padding: 3px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .mode-btn {
+    flex: 1; padding: 9px 12px; border: none; border-radius: 10px;
+    background: transparent; color: #52525b; font-size: 12px;
+    cursor: pointer; font-family: inherit; transition: all 0.2s; text-align: center;
+  }
+  .mode-btn.active {
+    background: rgba(110,231,183,0.1); color: #6ee7b7;
+    box-shadow: 0 2px 8px rgba(110,231,183,0.1);
+  }
+  .mode-btn .sub { font-size: 9px; display: block; margin-top: 2px; opacity: 0.6; }
+  #keySection { margin-bottom: 20px; display: none; }
   #keySection input {
     width: 100%; padding: 12px 14px; background: #111118; border: 1px solid #27272a;
     border-radius: 10px; color: #a1a1aa; font-size: 13px; font-family: inherit; outline: none;
   }
   #keySection input:focus { border-color: #6ee7b7; }
   #keySection .hint { font-size: 10px; color: #52525b; margin-top: 6px; text-align: center; }
-  #keySection.hidden { display: none; }
-
-  /* Status */
   #status {
     text-align: center; font-size: 13px; color: #71717a;
     margin-bottom: 16px; min-height: 20px;
@@ -39,8 +49,6 @@
     display: inline-block; width: 6px; height: 6px; border-radius: 50%;
     background: #6ee7b7; margin-right: 8px; animation: blink 1s infinite;
   }
-
-  /* Speed */
   .speed-bar { display: flex; justify-content: center; gap: 8px; margin-bottom: 16px; }
   .speed-btn {
     font-size: 10px; padding: 4px 14px; border-radius: 20px;
@@ -48,33 +56,26 @@
     color: #52525b; cursor: pointer; font-family: inherit; transition: all 0.2s;
   }
   .speed-btn.active { background: rgba(110,231,183,0.08); border-color: rgba(110,231,183,0.2); color: #6ee7b7; }
-
-  /* Commands */
   .cmds { display: flex; justify-content: center; gap: 5px; flex-wrap: wrap; margin-bottom: 20px; }
   .cmd {
     font-size: 9px; padding: 3px 8px; border-radius: 16px;
     background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); color: #52525b;
   }
   .cmd b { color: #71717a; font-weight: 500; }
-
-  /* Question display */
   .q-block {
     background: rgba(110,231,183,0.04); border: 1px solid rgba(110,231,183,0.1);
     border-radius: 12px; padding: 12px 14px; margin-bottom: 12px;
-    font-size: 14px; color: #a1a1aa; line-height: 1.5;
-    animation: slideUp 0.3s ease;
+    font-size: 14px; color: #a1a1aa; line-height: 1.5; animation: slideUp 0.3s ease;
   }
   .q-block .label { font-size: 9px; color: #525260; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
-
-  /* Sentence cards */
   #list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
   .card {
     background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);
-    border-radius: 12px; padding: 12px 14px; transition: all 0.3s;
-    animation: slideUp 0.25s ease;
+    border-radius: 12px; padding: 12px 14px; transition: all 0.3s; animation: slideUp 0.25s ease;
   }
   .card.active { background: rgba(110,231,183,0.05); border-color: rgba(110,231,183,0.15); }
   .card .num { font-size: 9px; color: #3f3f46; margin-bottom: 3px; }
+  .card .ko { font-size: 11px; color: #71717a; margin-bottom: 4px; }
   .card .text { font-size: 15px; color: #e4e4e7; line-height: 1.55; margin-bottom: 8px; }
   .btns { display: flex; gap: 6px; align-items: center; }
   .btn {
@@ -87,25 +88,10 @@
     background: none; border: none; padding: 5px 7px; color: #3f3f46;
     font-size: 10px; cursor: pointer; margin-left: auto; font-family: inherit;
   }
-  #playAll {
-    width: 100%; padding: 10px; background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.05); border-radius: 10px;
-    color: #71717a; font-size: 11px; cursor: pointer; font-family: inherit;
-    margin-bottom: 14px; display: none;
-  }
   #empty {
     text-align: center; padding: 40px 20px; color: #3f3f46;
     font-size: 13px; line-height: 1.8;
   }
-
-  /* Conversation history toggle */
-  .history-divider {
-    text-align: center; margin: 20px 0 12px; font-size: 10px;
-    letter-spacing: 0.15em; text-transform: uppercase; color: #3f3f46;
-    cursor: pointer;
-  }
-
-  /* Bottom bar */
   .bottom-bar {
     position: fixed; bottom: 0; left: 0; right: 0;
     display: flex; justify-content: center; align-items: center;
@@ -128,53 +114,44 @@
     background: rgba(255,255,255,0.06); color: #71717a; font-size: 14px;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
   }
-
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
   @keyframes slideUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 </style>
 </head>
 <body>
-
 <div class="wrap">
   <div class="header">
     <small>voice ai assistant</small>
     <h1>Ask me anything 🎧</h1>
   </div>
-
+  <div class="mode-bar">
+    <button class="mode-btn active" id="modeTranslate" onclick="switchMode('translate')">
+      🌐 Translate<span class="sub">무료 · 한→영</span>
+    </button>
+    <button class="mode-btn" id="modeAI" onclick="switchMode('ai')">
+      🤖 AI Answer<span class="sub">API Key 필요</span>
+    </button>
+  </div>
   <div id="keySection">
     <input type="password" id="apiKey" placeholder="Anthropic API Key (sk-ant-...)" oninput="saveKey()">
     <div class="hint">Key is stored in memory only — never sent anywhere except Anthropic</div>
   </div>
-
-  <div id="status">Tap mic and ask in English</div>
-
+  <div id="status">Tap mic to start</div>
   <div class="speed-bar">
     <button class="speed-btn" onclick="setSpeed(0.6)">Slow</button>
     <button class="speed-btn active" id="speedNormal" onclick="setSpeed(0.9)">Normal</button>
     <button class="speed-btn" onclick="setSpeed(1.2)">Fast</button>
   </div>
-
-  <div class="cmds">
-    <div class="cmd"><b>"question"</b> start</div>
-    <div class="cmd"><b>"retry"</b> re-ask</div>
-    <div class="cmd"><b>"again"</b> replay</div>
-    <div class="cmd"><b>"next"</b> next</div>
-    <div class="cmd"><b>"number N"</b> play #</div>
-    <div class="cmd"><b>"stop"</b> stop</div>
-    <div class="cmd"><b>"slow"</b> slow</div>
-    <div class="cmd"><b>"clear"</b> clear</div>
-  </div>
-
+  <div class="cmds" id="cmdsArea"></div>
   <div id="conversation"></div>
-  <div id="empty">🎤 Tap the mic and ask a question in English<br>I'll answer and read it sentence by sentence<br><br>🎧 Use one AirPod for best experience</div>
+  <div id="empty">🎤 Tap the mic and speak<br>🎧 Use one AirPod for best experience</div>
 </div>
-
 <div class="bottom-bar">
   <button class="clear-btn" onclick="clearAll()">🗑</button>
   <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎤</button>
 </div>
-
 <script>
+let mode = 'translate';
 let apiKey = '';
 let listening = false;
 let recognition = null;
@@ -183,23 +160,55 @@ let curSentences = [];
 let curIdx = -1;
 let speaking = false;
 let conversationHistory = [];
+let waitingForQuestion = false;
+let lastQuestion = '';
+let translateSentences = [];
 
-// --- API Key ---
-function saveKey() {
-  apiKey = document.getElementById('apiKey').value.trim();
-  if (apiKey.startsWith('sk-ant-')) {
-    document.getElementById('keySection').style.opacity = '0.4';
-  }
+function switchMode(m) {
+  mode = m;
+  document.getElementById('modeTranslate').className = 'mode-btn' + (m === 'translate' ? ' active' : '');
+  document.getElementById('modeAI').className = 'mode-btn' + (m === 'ai' ? ' active' : '');
+  document.getElementById('keySection').style.display = m === 'ai' ? 'block' : 'none';
+  if (listening) toggleMic();
+  clearAll();
+  updateCmds();
 }
 
-// --- Status ---
+function updateCmds() {
+  const a = document.getElementById('cmdsArea');
+  if (mode === 'translate') {
+    a.innerHTML =
+      '<div class="cmd"><b>"다시"</b> replay</div>' +
+      '<div class="cmd"><b>"다음"</b> next</div>' +
+      '<div class="cmd"><b>"N번"</b> play #</div>' +
+      '<div class="cmd"><b>"멈춰"</b> stop</div>' +
+      '<div class="cmd"><b>"느리게"</b> slow</div>' +
+      '<div class="cmd"><b>"지워"</b> clear</div>';
+  } else {
+    a.innerHTML =
+      '<div class="cmd"><b>"question"</b> start</div>' +
+      '<div class="cmd"><b>"retry"</b> re-ask</div>' +
+      '<div class="cmd"><b>"again"</b> replay</div>' +
+      '<div class="cmd"><b>"next"</b> next</div>' +
+      '<div class="cmd"><b>"number N"</b> play #</div>' +
+      '<div class="cmd"><b>"stop"</b> stop</div>' +
+      '<div class="cmd"><b>"slow"</b> slow</div>' +
+      '<div class="cmd"><b>"clear"</b> clear</div>';
+  }
+}
+updateCmds();
+
+function saveKey() {
+  apiKey = document.getElementById('apiKey').value.trim();
+  if (apiKey.startsWith('sk-ant-')) document.getElementById('keySection').style.opacity = '0.4';
+}
+
 function setStatus(text, on) {
   const el = document.getElementById('status');
   el.className = on ? 'on' : '';
   el.innerHTML = (on ? '<span class="dot"></span>' : '') + esc(text);
 }
 
-// --- Speed ---
 function setSpeed(s) {
   speed = s;
   document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
@@ -208,19 +217,17 @@ function setSpeed(s) {
   else document.getElementById('speedNormal').classList.add('active');
 }
 
-// --- TTS ---
 function speakSentence(text, idx, rate) {
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'en-US';
-  u.rate = rate || speed;
+  u.lang = 'en-US'; u.rate = rate || speed;
   const voices = speechSynthesis.getVoices();
   const v = voices.find(v => v.lang.startsWith('en') && v.name.includes('Samantha'))
     || voices.find(v => v.lang === 'en-US')
     || voices.find(v => v.lang.startsWith('en'));
   if (v) u.voice = v;
   u.onstart = () => { speaking = true; curIdx = idx; updateActive(); };
-  u.onend = () => { speaking = false; updateActive(); if (listening) setStatus('Listening...', true); };
+  u.onend = () => { speaking = false; updateActive(); if (listening) { if (mode==='translate') setStatus('Listening...', true); else setStatus('🔒 Waiting for command...', true); }};
   speechSynthesis.speak(u);
 }
 
@@ -240,149 +247,146 @@ function playAll() {
   next();
 }
 
-let waitingForQuestion = false;
-let lastQuestion = '';
+// ---- TRANSLATE ----
+function checkTranslateCmd(text) {
+  const t = text.trim();
+  const map = { '다시':'replay','한번 더':'replay','다음':'next','멈춰':'stop','그만':'stop','정지':'stop','지워':'clear','초기화':'clear','삭제':'clear','느리게':'slow','천천히':'slow','보통':'normal','빠르게':'fast','빨리':'fast' };
+  if (map[t]) return map[t];
+  const m = t.match(/^(\d+)\s*번/);
+  if (m) return 'play:' + (parseInt(m[1]) - 1);
+  return null;
+}
 
-// --- Voice Commands ---
-function checkCommand(text) {
+function runTranslateCmd(cmd) {
+  if (cmd === 'replay') { const i = curIdx >= 0 ? curIdx : curSentences.length - 1; if (curSentences[i]) speakSentence(curSentences[i], i); }
+  else if (cmd === 'next') { const i = curIdx + 1; if (curSentences[i]) speakSentence(curSentences[i], i); }
+  else if (cmd === 'stop') { speechSynthesis.cancel(); speaking = false; updateActive(); }
+  else if (cmd === 'clear') { clearAll(); }
+  else if (cmd === 'slow') { setSpeed(0.6); }
+  else if (cmd === 'normal') { setSpeed(0.9); }
+  else if (cmd === 'fast') { setSpeed(1.2); }
+  else if (cmd.startsWith('play:')) { const i = parseInt(cmd.split(':')[1]); if (curSentences[i]) speakSentence(curSentences[i], i); }
+}
+
+async function translateText(text) {
+  setStatus('"' + text + '" — translating...', true);
+  try {
+    const res = await fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=ko|en');
+    const data = await res.json();
+    let tr = data.responseData?.translatedText || '';
+    if (!tr || tr === text) { setStatus('Translation failed', false); return; }
+    if (tr === tr.toUpperCase() && tr.length > 3) tr = tr.charAt(0) + tr.slice(1).toLowerCase();
+    translateSentences.push({ ko: text, en: tr });
+    curSentences = translateSentences.map(s => s.en);
+    curIdx = curSentences.length - 1;
+    renderTranslation();
+    speakSentence(tr, curIdx);
+  } catch (e) { setStatus('Translation error', false); }
+}
+
+function renderTranslation() {
+  const conv = document.getElementById('conversation');
+  document.getElementById('empty').style.display = 'none';
+  let html = '<div id="list">';
+  translateSentences.forEach((s, i) => {
+    html += '<div class="card' + (i === curIdx && speaking ? ' active' : '') + '" id="c' + i + '">' +
+      '<div class="num">#' + (i+1) + '</div><div class="ko">' + esc(s.ko) + '</div><div class="text">' + esc(s.en) + '</div>' +
+      '<div class="btns"><button class="btn" onclick="speakSentence(\'' + esc2(s.en) + '\',' + i + ')">▶</button>' +
+      '<button class="btn slow" onclick="speakSentence(\'' + esc2(s.en) + '\',' + i + ',0.5)">🐢</button>' +
+      '<button class="btn" onclick="copyText(\'' + esc2(s.en) + '\')">Copy</button>' +
+      '<button class="btn-x" onclick="removeTranslation(' + i + ')">✕</button></div></div>';
+  });
+  html += '</div>';
+  if (translateSentences.length > 1) html += '<button id="playAll" style="display:block;width:100%;padding:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);border-radius:10px;color:#71717a;font-size:11px;cursor:pointer;font-family:inherit;margin-bottom:14px;" onclick="playAll()">▶ Play All</button>';
+  conv.innerHTML = html;
+}
+
+function removeTranslation(i) {
+  if (i === curIdx) { speechSynthesis.cancel(); speaking = false; }
+  translateSentences.splice(i, 1);
+  curSentences = translateSentences.map(s => s.en);
+  if (curIdx >= curSentences.length) curIdx = curSentences.length - 1;
+  if (translateSentences.length === 0) { document.getElementById('conversation').innerHTML = ''; document.getElementById('empty').style.display = 'block'; }
+  else renderTranslation();
+}
+
+// ---- AI ----
+function checkAICmd(text) {
   const t = text.toLowerCase().trim();
-  if (['question'].includes(t)) return 'ask';
-  if (['retry', 'try again', 'one more time'].includes(t)) return 'retry';
-  if (['again', 'replay', 'repeat'].includes(t)) return 'replay';
+  if (t === 'question') return 'ask';
+  if (['retry','try again','one more time'].includes(t)) return 'retry';
+  if (['again','replay','repeat'].includes(t)) return 'replay';
   if (t === 'next') return 'next';
-  if (['stop', 'pause'].includes(t)) return 'stop';
-  if (['clear', 'reset'].includes(t)) return 'clear';
-  if (['slow', 'slowly', 'slower'].includes(t)) return 'slow';
-  if (['normal', 'normal speed'].includes(t)) return 'normal';
-  if (['fast', 'faster', 'quickly'].includes(t)) return 'fast';
+  if (['stop','pause'].includes(t)) return 'stop';
+  if (['clear','reset'].includes(t)) return 'clear';
+  if (['slow','slowly','slower'].includes(t)) return 'slow';
+  if (['normal','normal speed'].includes(t)) return 'normal';
+  if (['fast','faster','quickly'].includes(t)) return 'fast';
   if (t === 'play all') return 'playall';
   const m = t.match(/^(?:number|sentence)\s*(\d+)$/);
   if (m) return 'play:' + (parseInt(m[1]) - 1);
   return null;
 }
 
-function runCommand(cmd) {
-  if (cmd === 'ask') {
-    waitingForQuestion = true;
-    speechSynthesis.cancel(); speaking = false;
-    setStatus('🎤 Ask your question now...', true);
-    return;
-  } else if (cmd === 'retry') {
-    if (lastQuestion) {
-      speechSynthesis.cancel(); speaking = false;
-      // Remove last Q&A from history
-      if (conversationHistory.length >= 2) {
-        conversationHistory.pop(); conversationHistory.pop();
-      }
-      askClaude(lastQuestion);
-    } else {
-      setStatus('No question to retry', false);
-    }
-    return;
-  } else if (cmd === 'replay') {
-    const i = curIdx >= 0 ? curIdx : curSentences.length - 1;
-    if (curSentences[i]) speakSentence(curSentences[i], i);
-  } else if (cmd === 'next') {
-    const i = curIdx + 1;
-    if (curSentences[i]) speakSentence(curSentences[i], i);
-  } else if (cmd === 'stop') {
-    speechSynthesis.cancel(); speaking = false; updateActive();
-  } else if (cmd === 'clear') { clearAll(); }
+function runAICmd(cmd) {
+  if (cmd === 'ask') { waitingForQuestion = true; speechSynthesis.cancel(); speaking = false; setStatus('🎤 Ask your question now...', true); return; }
+  if (cmd === 'retry') { if (lastQuestion) { speechSynthesis.cancel(); speaking = false; if (conversationHistory.length >= 2) { conversationHistory.pop(); conversationHistory.pop(); } askClaude(lastQuestion); } return; }
+  if (cmd === 'replay') { const i = curIdx >= 0 ? curIdx : curSentences.length - 1; if (curSentences[i]) speakSentence(curSentences[i], i); }
+  else if (cmd === 'next') { const i = curIdx + 1; if (curSentences[i]) speakSentence(curSentences[i], i); }
+  else if (cmd === 'stop') { speechSynthesis.cancel(); speaking = false; updateActive(); }
+  else if (cmd === 'clear') { clearAll(); }
   else if (cmd === 'slow') { setSpeed(0.6); }
   else if (cmd === 'normal') { setSpeed(0.9); }
   else if (cmd === 'fast') { setSpeed(1.2); }
   else if (cmd === 'playall') { playAll(); }
-  else if (cmd.startsWith('play:')) {
-    const i = parseInt(cmd.split(':')[1]);
-    if (curSentences[i]) speakSentence(curSentences[i], i);
-  }
+  else if (cmd.startsWith('play:')) { const i = parseInt(cmd.split(':')[1]); if (curSentences[i]) speakSentence(curSentences[i], i); }
 }
 
-// --- Split into sentences ---
 function splitSentences(text) {
   return text.match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map(s => s.trim()).filter(s => s.length > 0) || [text];
 }
 
-// --- Ask Claude ---
 async function askClaude(question) {
-  if (!apiKey) {
-    setStatus('Please enter your API key above', false);
-    return;
-  }
+  if (!apiKey) { setStatus('Enter API key first', false); return; }
   setStatus('Thinking...', true);
-
   conversationHistory.push({ role: 'user', content: question });
-
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
+        model: 'claude-sonnet-4-20250514', max_tokens: 1024,
         system: 'You are an English-speaking AI. Rules: 1) Answer in EXACTLY 5 sentences. No more, no less. 2) Use only simple, everyday English words. Avoid difficult or academic vocabulary. 3) Give ONLY your direct answer or opinion. No greetings, no filler, no "That\'s a great question", no introductions. Just the answer. 4) Speak naturally like a real person having a conversation. 5) At least ONE sentence MUST include an example. Choose the best style for the situation: sometimes a personal experience like "I remember when..." or "Last time I...", sometimes a general example like "For example,..." or "Like,...". Make it sound natural and believable.',
         messages: conversationHistory.slice(-10),
       }),
     });
     const data = await res.json();
-    
-    if (data.error) {
-      setStatus('API error: ' + (data.error.message || 'unknown'), false);
-      conversationHistory.pop();
-      return;
-    }
-
+    if (data.error) { setStatus('API error: ' + (data.error.message || 'unknown'), false); conversationHistory.pop(); return; }
     const answer = (data.content || []).map(b => b.text || '').join('');
     conversationHistory.push({ role: 'assistant', content: answer });
-
     curSentences = splitSentences(answer);
     curIdx = -1;
-    renderConversation(question, curSentences);
-    
-    // Auto-play all sentences
+    renderAI(question, curSentences);
     playAll();
-
-  } catch (e) {
-    setStatus('Network error', false);
-    conversationHistory.pop();
-  }
+  } catch (e) { setStatus('Network error', false); conversationHistory.pop(); }
 }
 
-// --- Render ---
-function renderConversation(question, sentences) {
+function renderAI(question, sentences) {
   const conv = document.getElementById('conversation');
   document.getElementById('empty').style.display = 'none';
-
-  // Question block
-  let html = '<div class="q-block"><div class="label">You</div>' + esc(question) + '</div>';
-
-  // Sentence cards
-  html += '<div id="list">';
+  let html = '<div class="q-block"><div class="label">You</div>' + esc(question) + '</div><div id="list">';
   sentences.forEach((s, i) => {
-    html += '<div class="card" id="c' + i + '">' +
-      '<div class="num">#' + (i + 1) + '</div>' +
-      '<div class="text">' + esc(s) + '</div>' +
-      '<div class="btns">' +
-        '<button class="btn" onclick="speakSentence(\'' + esc2(s) + '\',' + i + ')">▶</button>' +
-        '<button class="btn slow" onclick="speakSentence(\'' + esc2(s) + '\',' + i + ',0.5)">🐢</button>' +
-        '<button class="btn" onclick="copyText(\'' + esc2(s) + '\')">Copy</button>' +
-      '</div>' +
-    '</div>';
+    html += '<div class="card" id="c' + i + '"><div class="num">#' + (i+1) + '</div><div class="text">' + esc(s) + '</div>' +
+      '<div class="btns"><button class="btn" onclick="speakSentence(\'' + esc2(s) + '\',' + i + ')">▶</button>' +
+      '<button class="btn slow" onclick="speakSentence(\'' + esc2(s) + '\',' + i + ',0.5)">🐢</button>' +
+      '<button class="btn" onclick="copyText(\'' + esc2(s) + '\')">Copy</button></div></div>';
   });
   html += '</div>';
-
-  if (sentences.length > 1) {
-    html += '<button id="playAll" style="display:block" onclick="playAll()">▶ Play All</button>';
-  }
-
+  if (sentences.length > 1) html += '<button id="playAll" style="display:block;width:100%;padding:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);border-radius:10px;color:#71717a;font-size:11px;cursor:pointer;font-family:inherit;margin-bottom:14px;" onclick="playAll()">▶ Play All</button>';
   conv.innerHTML = html;
 }
 
+// ---- SHARED ----
 function updateActive() {
   curSentences.forEach((_, i) => {
     const el = document.getElementById('c' + i);
@@ -391,11 +395,8 @@ function updateActive() {
 }
 
 function clearAll() {
-  speechSynthesis.cancel();
-  speaking = false;
-  curSentences = [];
-  curIdx = -1;
-  conversationHistory = [];
+  speechSynthesis.cancel(); speaking = false; curSentences = []; curIdx = -1;
+  conversationHistory = []; translateSentences = []; waitingForQuestion = false; lastQuestion = '';
   document.getElementById('conversation').innerHTML = '';
   document.getElementById('empty').style.display = 'block';
   setStatus('Cleared', false);
@@ -403,79 +404,41 @@ function clearAll() {
 
 function copyText(t) { navigator.clipboard.writeText(t).catch(() => {}); }
 
-// --- Speech Recognition ---
+// ---- MIC ----
 function toggleMic() {
   const btn = document.getElementById('micBtn');
-  if (listening) {
-    recognition?.stop();
-    listening = false;
-    btn.className = 'mic-btn';
-    btn.textContent = '🎤';
-    setStatus('Stopped', false);
-    return;
-  }
-
-  if (!apiKey) {
-    setStatus('Please enter your API key first', false);
-    document.getElementById('apiKey').focus();
-    return;
-  }
-
+  if (listening) { recognition?.stop(); listening = false; btn.className = 'mic-btn'; btn.textContent = '🎤'; setStatus('Stopped', false); return; }
+  if (mode === 'ai' && !apiKey) { setStatus('Enter API key first', false); document.getElementById('apiKey').focus(); return; }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { setStatus('Speech recognition not supported', false); return; }
-
   recognition = new SR();
-  recognition.lang = 'en-US';
+  recognition.lang = mode === 'translate' ? 'ko-KR' : 'en-US';
   recognition.continuous = true;
   recognition.interimResults = false;
-
   recognition.onresult = (e) => {
     const last = e.results[e.results.length - 1];
     if (last.isFinal) {
       const text = last[0].transcript.trim();
       if (!text) return;
-
-      // If waiting for question after "ask" trigger, send as question
-      if (waitingForQuestion) {
-        waitingForQuestion = false;
-        lastQuestion = text;
-        setStatus('🔒 Waiting for command...', true);
-        askClaude(text);
-        return;
+      if (mode === 'translate') {
+        const cmd = checkTranslateCmd(text);
+        if (cmd) { runTranslateCmd(cmd); setStatus('Listening...', true); }
+        else translateText(text);
+      } else {
+        if (waitingForQuestion) { waitingForQuestion = false; lastQuestion = text; setStatus('🔒 Waiting for command...', true); askClaude(text); return; }
+        const cmd = checkAICmd(text);
+        if (cmd) { runAICmd(cmd); if (!waitingForQuestion) setStatus('🔒 Waiting for command...', true); }
       }
-
-      // Only listen for commands — ignore everything else
-      const cmd = checkCommand(text);
-      if (cmd) {
-        runCommand(cmd);
-        if (!waitingForQuestion) setStatus('🔒 Waiting for command...', true);
-      }
-      // If not a command, do nothing (ignore noise/other people)
     }
   };
-
-  recognition.onstart = () => {
-    listening = true;
-    btn.className = 'mic-btn on';
-    btn.textContent = '■';
-    setStatus('🔒 Waiting for command...', true);
-  };
-
-  recognition.onerror = (e) => {
-    if (e.error !== 'no-speech' && e.error !== 'aborted')
-      setStatus('Error: ' + e.error, false);
-  };
-
-  recognition.onend = () => {
-    if (listening) { try { recognition.start(); } catch {} }
-  };
-
+  recognition.onstart = () => { listening = true; btn.className = 'mic-btn on'; btn.textContent = '■'; if (mode === 'translate') setStatus('Listening...', true); else setStatus('🔒 Waiting for command...', true); };
+  recognition.onerror = (e) => { if (e.error !== 'no-speech' && e.error !== 'aborted') setStatus('Error: ' + e.error, false); };
+  recognition.onend = () => { if (listening) { try { recognition.start(); } catch {} } };
   recognition.start();
 }
 
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function esc2(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' '); }
-
 speechSynthesis.getVoices();
 speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
 </script>
