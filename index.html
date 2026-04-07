@@ -163,6 +163,26 @@ let conversationHistory = [];
 let waitingForQuestion = false;
 let lastQuestion = '';
 let translateSentences = [];
+let wakeLock = null;
+let stopCount = 0;
+let stopTimer = null;
+let ttsPlaying = false;
+
+// --- Wake Lock (keep screen on) ---
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    }
+  } catch (e) {}
+}
+async function releaseWakeLock() {
+  if (wakeLock) { await wakeLock.release(); wakeLock = null; }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && listening) requestWakeLock();
+});
 
 function switchMode(m) {
   mode = m;
@@ -178,22 +198,33 @@ function updateCmds() {
   const a = document.getElementById('cmdsArea');
   if (mode === 'translate') {
     a.innerHTML =
-      '<div class="cmd"><b>"다시"</b> replay</div>' +
-      '<div class="cmd"><b>"다음"</b> next</div>' +
-      '<div class="cmd"><b>"N번"</b> play #</div>' +
-      '<div class="cmd"><b>"멈춰"</b> stop</div>' +
-      '<div class="cmd"><b>"느리게"</b> slow</div>' +
-      '<div class="cmd"><b>"지워"</b> clear</div>';
+      '<div class="cmd"><b>"다시"</b> 현재 문장 다시 듣기</div>' +
+      '<div class="cmd"><b>"다음"</b> 다음 문장 듣기</div>' +
+      '<div class="cmd"><b>"N번"</b> N번 문장 듣기</div>' +
+      '<div class="cmd"><b>"멈춰"</b> 재생 멈춤</div>' +
+      '<div class="cmd"><b>"멈춰"x3</b> 전부 초기화</div>' +
+      '<div class="cmd"><b>"느리게"</b> 느린 속도로 변경</div>' +
+      '<div class="cmd"><b>"보통"</b> 보통 속도로 변경</div>' +
+      '<div class="cmd"><b>"빠르게"</b> 빠른 속도로 변경</div>' +
+      '<div class="cmd"><b>"리셋"</b> 전부 초기화</div>' +
+      '<div class="cmd"><b>"에이아이 모드"</b> AI 모드로 변경</div>';
   } else {
     a.innerHTML =
-      '<div class="cmd"><b>"question"</b> start</div>' +
-      '<div class="cmd"><b>"retry"</b> re-ask</div>' +
-      '<div class="cmd"><b>"again"</b> replay</div>' +
-      '<div class="cmd"><b>"next"</b> next</div>' +
-      '<div class="cmd"><b>"number N"</b> play #</div>' +
-      '<div class="cmd"><b>"stop"</b> stop</div>' +
-      '<div class="cmd"><b>"slow"</b> slow</div>' +
-      '<div class="cmd"><b>"clear"</b> clear</div>';
+      '<div class="cmd"><b>"question"</b> 질문 시작 (Ready 후 말하기)</div>' +
+      '<div class="cmd"><b>"more answer"</b> 같은 질문에 5문장 추가</div>' +
+      '<div class="cmd"><b>"another answer"</b> 같은 질문에 다른 답변</div>' +
+      '<div class="cmd"><b>"retry"</b> 같은 질문 다시 질문</div>' +
+      '<div class="cmd"><b>"again"</b> 현재 문장 다시 듣기</div>' +
+      '<div class="cmd"><b>"next"</b> 다음 문장 듣기</div>' +
+      '<div class="cmd"><b>"number N"</b> N번 문장 듣기</div>' +
+      '<div class="cmd"><b>"play all"</b> 전체 문장 재생</div>' +
+      '<div class="cmd"><b>"stop"</b> 재생 멈춤</div>' +
+      '<div class="cmd"><b>"stop"x3</b> 전부 초기화</div>' +
+      '<div class="cmd"><b>"slow"</b> 느린 속도로 변경</div>' +
+      '<div class="cmd"><b>"normal"</b> 보통 속도로 변경</div>' +
+      '<div class="cmd"><b>"fast"</b> 빠른 속도로 변경</div>' +
+      '<div class="cmd"><b>"reset"</b> 전부 초기화</div>' +
+      '<div class="cmd"><b>"translate mode"</b> 번역 모드로 변경</div>';
   }
 }
 updateCmds();
@@ -219,27 +250,29 @@ function setSpeed(s) {
 
 function speakSentence(text, idx, rate) {
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
+  const spokenText = 'Number ' + (idx + 1) + '. ' + text;
+  const u = new SpeechSynthesisUtterance(spokenText);
   u.lang = 'en-US'; u.rate = rate || speed;
   const voices = speechSynthesis.getVoices();
   const v = voices.find(v => v.lang.startsWith('en') && v.name.includes('Samantha'))
     || voices.find(v => v.lang === 'en-US')
     || voices.find(v => v.lang.startsWith('en'));
   if (v) u.voice = v;
-  u.onstart = () => { speaking = true; curIdx = idx; updateActive(); };
-  u.onend = () => { speaking = false; updateActive(); if (listening) { if (mode==='translate') setStatus('Listening...', true); else setStatus('🔒 Waiting for command...', true); }};
+  u.onstart = () => { speaking = true; ttsPlaying = true; curIdx = idx; updateActive(); };
+  u.onend = () => { speaking = false; ttsPlaying = false; updateActive(); if (listening) { if (mode==='translate') setStatus('Listening...', true); else setStatus('🔒 Waiting for command...', true); }};
   speechSynthesis.speak(u);
 }
 
 function playAll() {
   if (!curSentences.length) return;
   speechSynthesis.cancel();
+  ttsPlaying = true;
   let i = 0;
   function next() {
-    if (i >= curSentences.length) { speaking = false; updateActive(); return; }
-    const u = new SpeechSynthesisUtterance(curSentences[i]);
-    u.lang = 'en-US'; u.rate = speed;
+    if (i >= curSentences.length) { speaking = false; ttsPlaying = false; updateActive(); return; }
     const idx = i;
+    const u = new SpeechSynthesisUtterance('Number ' + (idx + 1) + '. ' + curSentences[i]);
+    u.lang = 'en-US'; u.rate = speed;
     u.onstart = () => { speaking = true; curIdx = idx; updateActive(); };
     u.onend = () => { i++; next(); };
     speechSynthesis.speak(u);
@@ -247,24 +280,33 @@ function playAll() {
   next();
 }
 
+// --- Voice feedback ---
+function voiceFeedback(text) {
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'en-US'; u.rate = 1; u.volume = 0.6;
+  speechSynthesis.speak(u);
+}
+
 // ---- TRANSLATE ----
 function checkTranslateCmd(text) {
   const t = text.trim();
-  const map = { '다시':'replay','한번 더':'replay','다음':'next','멈춰':'stop','그만':'stop','정지':'stop','지워':'clear','초기화':'clear','삭제':'clear','느리게':'slow','천천히':'slow','보통':'normal','빠르게':'fast','빨리':'fast' };
+  const map = { '다시':'replay','한번 더':'replay','다음':'next','멈춰':'stop','그만':'stop','정지':'stop','리셋':'clear','느리게':'slow','천천히':'slow','보통':'normal','빠르게':'fast','빨리':'fast','에이아이 모드':'switchAI','AI 모드':'switchAI' };
   if (map[t]) return map[t];
+  if (t.toLowerCase().includes('ai mode') || t.toLowerCase().includes('ai 모드')) return 'switchAI';
   const m = t.match(/^(\d+)\s*번/);
   if (m) return 'play:' + (parseInt(m[1]) - 1);
   return null;
 }
 
 function runTranslateCmd(cmd) {
+  if (cmd === 'switchAI') { if (listening) toggleMic(); switchMode('ai'); voiceFeedback('AI mode.'); setTimeout(() => toggleMic(), 1000); return; }
   if (cmd === 'replay') { const i = curIdx >= 0 ? curIdx : curSentences.length - 1; if (curSentences[i]) speakSentence(curSentences[i], i); }
   else if (cmd === 'next') { const i = curIdx + 1; if (curSentences[i]) speakSentence(curSentences[i], i); }
-  else if (cmd === 'stop') { speechSynthesis.cancel(); speaking = false; updateActive(); }
-  else if (cmd === 'clear') { clearAll(); }
-  else if (cmd === 'slow') { setSpeed(0.6); }
-  else if (cmd === 'normal') { setSpeed(0.9); }
-  else if (cmd === 'fast') { setSpeed(1.2); }
+  else if (cmd === 'stop') { speechSynthesis.cancel(); speaking = false; updateActive(); voiceFeedback('Complete.'); stopCount++; if (stopTimer) clearTimeout(stopTimer); stopTimer = setTimeout(() => { stopCount = 0; }, 5000); if (stopCount >= 3) { stopCount = 0; clearAll(); voiceFeedback('Cleared.'); return; } }
+  else if (cmd === 'clear') { clearAll(); voiceFeedback('Complete.'); }
+  else if (cmd === 'slow') { setSpeed(0.6); voiceFeedback('Complete.'); }
+  else if (cmd === 'normal') { setSpeed(0.9); voiceFeedback('Complete.'); }
+  else if (cmd === 'fast') { setSpeed(1.2); voiceFeedback('Complete.'); }
   else if (cmd.startsWith('play:')) { const i = parseInt(cmd.split(':')[1]); if (curSentences[i]) speakSentence(curSentences[i], i); }
 }
 
@@ -313,12 +355,15 @@ function removeTranslation(i) {
 // ---- AI ----
 function checkAICmd(text) {
   const t = text.toLowerCase().trim();
+  if (t === 'translate mode') return 'switchTranslate';
   if (t === 'question') return 'ask';
   if (['retry','try again','one more time'].includes(t)) return 'retry';
+  if (t.includes('more answer') || t.includes('more answers')) return 'more';
+  if (t.includes('another answer') || t.includes('another answers')) return 'another';
   if (['again','replay','repeat'].includes(t)) return 'replay';
   if (t === 'next') return 'next';
   if (['stop','pause'].includes(t)) return 'stop';
-  if (['clear','reset'].includes(t)) return 'clear';
+  if (['reset'].includes(t)) return 'clear';
   if (['slow','slowly','slower'].includes(t)) return 'slow';
   if (['normal','normal speed'].includes(t)) return 'normal';
   if (['fast','faster','quickly'].includes(t)) return 'fast';
@@ -329,21 +374,91 @@ function checkAICmd(text) {
 }
 
 function runAICmd(cmd) {
-  if (cmd === 'ask') { waitingForQuestion = true; speechSynthesis.cancel(); speaking = false; setStatus('🎤 Ask your question now...', true); return; }
-  if (cmd === 'retry') { if (lastQuestion) { speechSynthesis.cancel(); speaking = false; if (conversationHistory.length >= 2) { conversationHistory.pop(); conversationHistory.pop(); } askClaude(lastQuestion); } return; }
+  if (cmd === 'switchTranslate') { if (listening) toggleMic(); switchMode('translate'); voiceFeedback('Translate mode.'); setTimeout(() => toggleMic(), 1000); return; }
+  if (cmd === 'ask') { speechSynthesis.cancel(); speaking = false; setStatus('🎤 Ask your question now...', true); const r = new SpeechSynthesisUtterance('Ready.'); r.lang = 'en-US'; r.rate = 1; r.volume = 0.6; r.onend = () => { waitingForQuestion = true; }; speechSynthesis.speak(r); return; }
+  if (cmd === 'retry') { voiceFeedback('Complete.'); if (lastQuestion) { speechSynthesis.cancel(); speaking = false; if (conversationHistory.length >= 2) { conversationHistory.pop(); conversationHistory.pop(); } askClaude(lastQuestion); } return; }
+  if (cmd === 'more') { voiceFeedback('Complete.'); if (lastQuestion) { moreAnswer(); } return; }
+  if (cmd === 'another') { voiceFeedback('Complete.'); if (lastQuestion) { anotherAnswer(); } return; }
   if (cmd === 'replay') { const i = curIdx >= 0 ? curIdx : curSentences.length - 1; if (curSentences[i]) speakSentence(curSentences[i], i); }
   else if (cmd === 'next') { const i = curIdx + 1; if (curSentences[i]) speakSentence(curSentences[i], i); }
-  else if (cmd === 'stop') { speechSynthesis.cancel(); speaking = false; updateActive(); }
-  else if (cmd === 'clear') { clearAll(); }
-  else if (cmd === 'slow') { setSpeed(0.6); }
-  else if (cmd === 'normal') { setSpeed(0.9); }
-  else if (cmd === 'fast') { setSpeed(1.2); }
+  else if (cmd === 'stop') { speechSynthesis.cancel(); speaking = false; updateActive(); voiceFeedback('Complete.'); stopCount++; if (stopTimer) clearTimeout(stopTimer); stopTimer = setTimeout(() => { stopCount = 0; }, 5000); if (stopCount >= 3) { stopCount = 0; clearAll(); voiceFeedback('Cleared.'); return; } }
+  else if (cmd === 'clear') { clearAll(); voiceFeedback('Complete.'); }
+  else if (cmd === 'slow') { setSpeed(0.6); voiceFeedback('Complete.'); }
+  else if (cmd === 'normal') { setSpeed(0.9); voiceFeedback('Complete.'); }
+  else if (cmd === 'fast') { setSpeed(1.2); voiceFeedback('Complete.'); }
   else if (cmd === 'playall') { playAll(); }
   else if (cmd.startsWith('play:')) { const i = parseInt(cmd.split(':')[1]); if (curSentences[i]) speakSentence(curSentences[i], i); }
 }
 
 function splitSentences(text) {
   return text.match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map(s => s.trim()).filter(s => s.length > 0) || [text];
+}
+
+async function moreAnswer() {
+  if (!apiKey || !lastQuestion) return;
+  speechSynthesis.cancel(); speaking = false;
+  setStatus('Getting more...', true);
+  const startNum = curSentences.length + 1;
+  conversationHistory.push({ role: 'user', content: 'Continue your answer about "' + lastQuestion + '" with 5 MORE sentences starting from number ' + startNum + '. Same rules: simple words, direct answer only, include at least one example.' });
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514', max_tokens: 1024,
+        system: 'You are an English-speaking AI. Rules: 1) Answer in EXACTLY 5 sentences. No more, no less. 2) Use only simple, everyday English words. 3) Give ONLY your direct answer. No filler. 4) Speak naturally. 5) At least ONE sentence MUST include an example.',
+        messages: conversationHistory.slice(-10),
+      }),
+    });
+    const data = await res.json();
+    if (data.error) { setStatus('API error', false); conversationHistory.pop(); return; }
+    const answer = (data.content || []).map(b => b.text || '').join('');
+    conversationHistory.push({ role: 'assistant', content: answer });
+    const newSentences = splitSentences(answer);
+    curSentences = curSentences.concat(newSentences);
+    renderAI(lastQuestion, curSentences);
+    // Play only the new sentences
+    ttsPlaying = true;
+    let i = curSentences.length - newSentences.length;
+    function playNew() {
+      if (i >= curSentences.length) { speaking = false; ttsPlaying = false; updateActive(); return; }
+      const u = new SpeechSynthesisUtterance('Number ' + (i + 1) + '. ' + curSentences[i]);
+      u.lang = 'en-US'; u.rate = speed;
+      const idx = i;
+      u.onstart = () => { speaking = true; curIdx = idx; updateActive(); };
+      u.onend = () => { i++; playNew(); };
+      speechSynthesis.speak(u);
+    }
+    playNew();
+  } catch (e) { setStatus('Network error', false); conversationHistory.pop(); }
+}
+
+async function anotherAnswer() {
+  if (!apiKey || !lastQuestion) return;
+  speechSynthesis.cancel(); speaking = false;
+  // Remove last Q&A
+  if (conversationHistory.length >= 2) { conversationHistory.pop(); conversationHistory.pop(); }
+  conversationHistory.push({ role: 'user', content: lastQuestion + ' (Give me a COMPLETELY DIFFERENT answer from before. Different perspective, different examples.)' });
+  setStatus('Thinking differently...', true);
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514', max_tokens: 1024,
+        system: 'You are an English-speaking AI. Rules: 1) Answer in EXACTLY 5 sentences. No more, no less. 2) Use only simple, everyday English words. 3) Give ONLY your direct answer. No filler. 4) Speak naturally. 5) At least ONE sentence MUST include an example. IMPORTANT: Give a completely different answer than any previous response. Use different points and different examples.',
+        messages: conversationHistory.slice(-10),
+      }),
+    });
+    const data = await res.json();
+    if (data.error) { setStatus('API error', false); conversationHistory.pop(); return; }
+    const answer = (data.content || []).map(b => b.text || '').join('');
+    conversationHistory.push({ role: 'assistant', content: answer });
+    curSentences = splitSentences(answer);
+    curIdx = -1;
+    renderAI(lastQuestion, curSentences);
+    playAll();
+  } catch (e) { setStatus('Network error', false); conversationHistory.pop(); }
 }
 
 async function askClaude(question) {
@@ -395,8 +510,9 @@ function updateActive() {
 }
 
 function clearAll() {
-  speechSynthesis.cancel(); speaking = false; curSentences = []; curIdx = -1;
+  speechSynthesis.cancel(); speaking = false; ttsPlaying = false; curSentences = []; curIdx = -1;
   conversationHistory = []; translateSentences = []; waitingForQuestion = false; lastQuestion = '';
+  stopCount = 0;
   document.getElementById('conversation').innerHTML = '';
   document.getElementById('empty').style.display = 'block';
   setStatus('Cleared', false);
@@ -407,10 +523,11 @@ function copyText(t) { navigator.clipboard.writeText(t).catch(() => {}); }
 // ---- MIC ----
 function toggleMic() {
   const btn = document.getElementById('micBtn');
-  if (listening) { recognition?.stop(); listening = false; btn.className = 'mic-btn'; btn.textContent = '🎤'; setStatus('Stopped', false); return; }
+  if (listening) { recognition?.stop(); listening = false; btn.className = 'mic-btn'; btn.textContent = '🎤'; setStatus('Stopped', false); releaseWakeLock(); return; }
   if (mode === 'ai' && !apiKey) { setStatus('Enter API key first', false); document.getElementById('apiKey').focus(); return; }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { setStatus('Speech recognition not supported', false); return; }
+  requestWakeLock();
   recognition = new SR();
   recognition.lang = mode === 'translate' ? 'ko-KR' : 'en-US';
   recognition.continuous = true;
@@ -420,6 +537,21 @@ function toggleMic() {
     if (last.isFinal) {
       const text = last[0].transcript.trim();
       if (!text) return;
+      
+      // During TTS, only accept stop commands
+      if (ttsPlaying) {
+        const t = text.toLowerCase().trim();
+        if (['stop','pause','멈춰','그만','정지'].includes(t)) {
+          speechSynthesis.cancel(); speaking = false; ttsPlaying = false; updateActive();
+          stopCount++;
+          if (stopTimer) clearTimeout(stopTimer);
+          stopTimer = setTimeout(() => { stopCount = 0; }, 5000);
+          if (stopCount >= 3) { stopCount = 0; clearAll(); voiceFeedback('Cleared.'); return; }
+          if (mode==='translate') setStatus('Listening...', true); else setStatus('🔒 Waiting for command...', true);
+        }
+        return;
+      }
+      
       if (mode === 'translate') {
         const cmd = checkTranslateCmd(text);
         if (cmd) { runTranslateCmd(cmd); setStatus('Listening...', true); }
@@ -428,6 +560,7 @@ function toggleMic() {
         if (waitingForQuestion) { waitingForQuestion = false; lastQuestion = text; setStatus('🔒 Waiting for command...', true); askClaude(text); return; }
         const cmd = checkAICmd(text);
         if (cmd) { runAICmd(cmd); if (!waitingForQuestion) setStatus('🔒 Waiting for command...', true); }
+        else { voiceFeedback('Command not recognized.'); setStatus('🔒 Waiting for command...', true); }
       }
     }
   };
