@@ -167,6 +167,7 @@ let wakeLock = null;
 let stopCount = 0;
 let stopTimer = null;
 let ttsPlaying = false;
+let questionBuffer = [];
 
 // --- Wake Lock (keep screen on) ---
 async function requestWakeLock() {
@@ -210,21 +211,22 @@ function updateCmds() {
       '<div class="cmd"><b>"에이아이 모드"</b> AI 모드로 변경</div>';
   } else {
     a.innerHTML =
-      '<div class="cmd"><b>"question"</b> 질문 시작 (Ready 후 말하기)</div>' +
-      '<div class="cmd"><b>"more answer"</b> 같은 질문에 5문장 추가</div>' +
-      '<div class="cmd"><b>"another answer"</b> 같은 질문에 다른 답변</div>' +
-      '<div class="cmd"><b>"retry"</b> 같은 질문 다시 질문</div>' +
-      '<div class="cmd"><b>"again"</b> 현재 문장 다시 듣기</div>' +
-      '<div class="cmd"><b>"next"</b> 다음 문장 듣기</div>' +
-      '<div class="cmd"><b>"number N"</b> N번 문장 듣기</div>' +
-      '<div class="cmd"><b>"play all"</b> 전체 문장 재생</div>' +
-      '<div class="cmd"><b>"stop"</b> 재생 멈춤</div>' +
-      '<div class="cmd"><b>"stop"x3</b> 전부 초기화</div>' +
-      '<div class="cmd"><b>"slow"</b> 느린 속도로 변경</div>' +
-      '<div class="cmd"><b>"normal"</b> 보통 속도로 변경</div>' +
-      '<div class="cmd"><b>"fast"</b> 빠른 속도로 변경</div>' +
-      '<div class="cmd"><b>"reset"</b> 전부 초기화</div>' +
-      '<div class="cmd"><b>"translate mode"</b> 번역 모드로 변경</div>';
+      '<div class="cmd"><b>"질문"</b> 질문 시작 (Ready 후 영어로 말하기)</div>' +
+      '<div class="cmd"><b>"done"</b> 질문 전송 (영어 인식 중)</div>' +
+      '<div class="cmd"><b>"더 답변"</b> 같은 질문에 5문장 추가</div>' +
+      '<div class="cmd"><b>"다른 답변"</b> 같은 질문에 다른 답변</div>' +
+      '<div class="cmd"><b>"재질문"</b> 같은 질문 다시 질문</div>' +
+      '<div class="cmd"><b>"다시"</b> 현재 문장 다시 듣기</div>' +
+      '<div class="cmd"><b>"다음"</b> 다음 문장 듣기</div>' +
+      '<div class="cmd"><b>"N번"</b> N번 문장 듣기</div>' +
+      '<div class="cmd"><b>"전체 재생"</b> 전체 문장 재생</div>' +
+      '<div class="cmd"><b>"멈춰"</b> 재생 멈춤</div>' +
+      '<div class="cmd"><b>"멈춰"x3</b> 전부 초기화</div>' +
+      '<div class="cmd"><b>"느리게"</b> 느린 속도로 변경</div>' +
+      '<div class="cmd"><b>"보통"</b> 보통 속도로 변경</div>' +
+      '<div class="cmd"><b>"빠르게"</b> 빠른 속도로 변경</div>' +
+      '<div class="cmd"><b>"리셋"</b> 전부 초기화</div>' +
+      '<div class="cmd"><b>"번역 모드"</b> 번역 모드로 변경</div>';
   }
 }
 updateCmds();
@@ -259,7 +261,7 @@ function speakSentence(text, idx, rate) {
     || voices.find(v => v.lang.startsWith('en'));
   if (v) u.voice = v;
   u.onstart = () => { speaking = true; ttsPlaying = true; curIdx = idx; updateActive(); };
-  u.onend = () => { speaking = false; ttsPlaying = false; updateActive(); if (listening) { if (mode==='translate') setStatus('Listening...', true); else setStatus('🔒 Waiting for command...', true); }};
+  u.onend = () => { speaking = false; ttsPlaying = false; updateActive(); if (listening) { if (mode==='translate') setStatus('Listening...', true); else setStatus('🔒 대기 중...', true); }};
   speechSynthesis.speak(u);
 }
 
@@ -354,28 +356,30 @@ function removeTranslation(i) {
 
 // ---- AI ----
 function checkAICmd(text) {
-  const t = text.toLowerCase().trim();
-  if (t === 'translate mode') return 'switchTranslate';
-  if (t === 'question') return 'ask';
-  if (['retry','try again','one more time'].includes(t)) return 'retry';
-  if (t.includes('more answer') || t.includes('more answers')) return 'more';
-  if (t.includes('another answer') || t.includes('another answers')) return 'another';
-  if (['again','replay','repeat'].includes(t)) return 'replay';
-  if (t === 'next') return 'next';
-  if (['stop','pause'].includes(t)) return 'stop';
-  if (['reset'].includes(t)) return 'clear';
-  if (['slow','slowly','slower'].includes(t)) return 'slow';
-  if (['normal','normal speed'].includes(t)) return 'normal';
-  if (['fast','faster','quickly'].includes(t)) return 'fast';
-  if (t === 'play all') return 'playall';
-  const m = t.match(/^(?:number|sentence)\s*(\d+)$/);
+  const t = text.trim();
+  const tl = t.toLowerCase();
+  // Korean commands
+  if (['질문'].includes(t)) return 'ask';
+  if (['번역 모드','번역모드'].includes(t)) return 'switchTranslate';
+  if (['다시','한번 더','리플레이'].includes(t)) return 'replay';
+  if (t === '다음') return 'next';
+  if (['멈춰','그만','정지'].includes(t)) return 'stop';
+  if (['리셋'].includes(t)) return 'clear';
+  if (['느리게','천천히'].includes(t)) return 'slow';
+  if (t === '보통') return 'normal';
+  if (['빠르게','빨리'].includes(t)) return 'fast';
+  if (['전체 재생','전체재생','다 들려줘'].includes(t)) return 'playall';
+  if (['다시 질문','재질문','리트라이'].includes(t)) return 'retry';
+  if (t.includes('더 답변') || t.includes('추가 답변') || t.includes('더 말해')) return 'more';
+  if (t.includes('다른 답변') || t.includes('다르게')) return 'another';
+  const m = t.match(/^(\d+)\s*번/);
   if (m) return 'play:' + (parseInt(m[1]) - 1);
   return null;
 }
 
 function runAICmd(cmd) {
   if (cmd === 'switchTranslate') { if (listening) toggleMic(); switchMode('translate'); voiceFeedback('Translate mode.'); setTimeout(() => toggleMic(), 1000); return; }
-  if (cmd === 'ask') { speechSynthesis.cancel(); speaking = false; setStatus('🎤 Ask your question now...', true); const r = new SpeechSynthesisUtterance('Ready.'); r.lang = 'en-US'; r.rate = 1; r.volume = 0.6; r.onend = () => { waitingForQuestion = true; }; speechSynthesis.speak(r); return; }
+  if (cmd === 'ask') { speechSynthesis.cancel(); speaking = false; questionBuffer = []; setStatus('🎤 영어로 질문하세요... "done" 하면 전송', true); const r = new SpeechSynthesisUtterance('Ready.'); r.lang = 'en-US'; r.rate = 1; r.volume = 0.6; r.onend = () => { waitingForQuestion = true; if (listening && recognition) { recognition.stop(); recognition.lang = 'en-US'; try { recognition.start(); } catch {} } }; speechSynthesis.speak(r); return; }
   if (cmd === 'retry') { voiceFeedback('Complete.'); if (lastQuestion) { speechSynthesis.cancel(); speaking = false; if (conversationHistory.length >= 2) { conversationHistory.pop(); conversationHistory.pop(); } askClaude(lastQuestion); } return; }
   if (cmd === 'more') { voiceFeedback('Complete.'); if (lastQuestion) { moreAnswer(); } return; }
   if (cmd === 'another') { voiceFeedback('Complete.'); if (lastQuestion) { anotherAnswer(); } return; }
@@ -511,7 +515,7 @@ function updateActive() {
 
 function clearAll() {
   speechSynthesis.cancel(); speaking = false; ttsPlaying = false; curSentences = []; curIdx = -1;
-  conversationHistory = []; translateSentences = []; waitingForQuestion = false; lastQuestion = '';
+  conversationHistory = []; translateSentences = []; waitingForQuestion = false; lastQuestion = ''; questionBuffer = [];
   stopCount = 0;
   document.getElementById('conversation').innerHTML = '';
   document.getElementById('empty').style.display = 'block';
@@ -529,7 +533,7 @@ function toggleMic() {
   if (!SR) { setStatus('Speech recognition not supported', false); return; }
   requestWakeLock();
   recognition = new SR();
-  recognition.lang = mode === 'translate' ? 'ko-KR' : 'en-US';
+  recognition.lang = 'ko-KR';
   recognition.continuous = true;
   recognition.interimResults = false;
   recognition.onresult = (e) => {
@@ -547,7 +551,7 @@ function toggleMic() {
           if (stopTimer) clearTimeout(stopTimer);
           stopTimer = setTimeout(() => { stopCount = 0; }, 5000);
           if (stopCount >= 3) { stopCount = 0; clearAll(); voiceFeedback('Cleared.'); return; }
-          if (mode==='translate') setStatus('Listening...', true); else setStatus('🔒 Waiting for command...', true);
+          if (mode==='translate') setStatus('Listening...', true); else setStatus('🔒 대기 중...', true);
         }
         return;
       }
@@ -557,14 +561,39 @@ function toggleMic() {
         if (cmd) { runTranslateCmd(cmd); setStatus('Listening...', true); }
         else translateText(text);
       } else {
-        if (waitingForQuestion) { waitingForQuestion = false; lastQuestion = text; setStatus('🔒 Waiting for command...', true); askClaude(text); return; }
+        if (waitingForQuestion) {
+          const tl = text.toLowerCase().trim();
+          // Check if "done" is said
+          const isDone = tl === 'done' || tl === 'done.' || tl.endsWith(' done') || tl.endsWith(' done.');
+          const cleaned = text.replace(/\s*done\.?\s*$/i, '').trim();
+          if (cleaned) questionBuffer.push(cleaned);
+          
+          if (isDone) {
+            waitingForQuestion = false;
+            const fullQuestion = questionBuffer.join(' ');
+            questionBuffer = [];
+            // Switch back to Korean
+            if (listening && recognition) { recognition.stop(); recognition.lang = 'ko-KR'; try { recognition.start(); } catch {} }
+            if (fullQuestion) {
+              lastQuestion = fullQuestion;
+              setStatus('🔒 대기 중...', true);
+              voiceFeedback('Complete.');
+              askClaude(fullQuestion);
+            } else {
+              setStatus('🔒 대기 중...', true);
+            }
+          } else {
+            setStatus('🎤 계속 말하세요... "done" 하면 전송 (' + questionBuffer.length + ')', true);
+          }
+          return;
+        }
         const cmd = checkAICmd(text);
-        if (cmd) { runAICmd(cmd); if (!waitingForQuestion) setStatus('🔒 Waiting for command...', true); }
-        else { voiceFeedback('Command not recognized.'); setStatus('🔒 Waiting for command...', true); }
+        if (cmd) { runAICmd(cmd); if (!waitingForQuestion) setStatus('🔒 대기 중...', true); }
+        else { voiceFeedback('Command not recognized.'); setStatus('🔒 대기 중...', true); }
       }
     }
   };
-  recognition.onstart = () => { listening = true; btn.className = 'mic-btn on'; btn.textContent = '■'; if (mode === 'translate') setStatus('Listening...', true); else setStatus('🔒 Waiting for command...', true); };
+  recognition.onstart = () => { listening = true; btn.className = 'mic-btn on'; btn.textContent = '■'; if (mode === 'translate') setStatus('Listening...', true); else setStatus('🔒 대기 중...', true); };
   recognition.onerror = (e) => { if (e.error !== 'no-speech' && e.error !== 'aborted') setStatus('Error: ' + e.error, false); };
   recognition.onend = () => { if (listening) { try { recognition.start(); } catch {} } };
   recognition.start();
