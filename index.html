@@ -156,6 +156,7 @@
 <div class="bottom-bar">
   <button class="clear-btn" onclick="clearAll()">🗑</button>
   <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎤</button>
+  <button class="clear-btn" onclick="speechSynthesis.speak(new SpeechSynthesisUtterance('Test.'))">🔊</button>
 </div>
 <script>
 let mode = 'translate';
@@ -318,16 +319,19 @@ function setSpeed(s) {
 function speakSentence(text, idx, rate) {
   cancelSpeech();
   const st = spokenText(text, idx);
-  const u = new SpeechSynthesisUtterance(st);
-  u.lang = 'en-US'; u.rate = rate || speed;
-  const voices = speechSynthesis.getVoices();
-  const v = voices.find(v => v.lang.startsWith('en') && v.name.includes('Samantha'))
-    || voices.find(v => v.lang === 'en-US')
-    || voices.find(v => v.lang.startsWith('en'));
-  if (v) u.voice = v;
-  u.onstart = () => { speaking = true; ttsPlaying = true; curIdx = idx; updateActive(); };
-  u.onend = () => { speaking = false; ttsPlaying = false; updateActive(); if (listening) { setStatus('🔒 대기 중...', true); }};
-  speechSynthesis.speak(u);
+  setTimeout(() => {
+    const u = new SpeechSynthesisUtterance(st);
+    u.lang = 'en-US'; u.rate = rate || speed;
+    const voices = speechSynthesis.getVoices();
+    const v = voices.find(v => v.lang.startsWith('en') && v.name.includes('Samantha'))
+      || voices.find(v => v.lang === 'en-US')
+      || voices.find(v => v.lang.startsWith('en'));
+    if (v) u.voice = v;
+    u.onstart = () => { speaking = true; ttsPlaying = true; curIdx = idx; updateActive(); };
+    u.onend = () => { speaking = false; ttsPlaying = false; updateActive(); if (listening) { setStatus('🔒 대기 중...', true); }};
+    u.onerror = () => { speaking = false; ttsPlaying = false; };
+    speechSynthesis.speak(u);
+  }, 100);
 }
 
 function spokenText(text, idx) {
@@ -346,9 +350,10 @@ function playAll() {
     u.lang = 'en-US'; u.rate = speed;
     u.onstart = () => { speaking = true; curIdx = idx; updateActive(); };
     u.onend = () => { i++; next(); };
+    u.onerror = () => { speaking = false; ttsPlaying = false; };
     speechSynthesis.speak(u);
   }
-  next();
+  setTimeout(next, 100);
 }
 
 // --- Slow Start (2초 후 천천히 전체 재생) ---
@@ -380,10 +385,18 @@ function slowStart() {
 // --- Voice feedback ---
 function voiceFeedback(text) {
   feedbackPlaying = true;
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'en-US'; u.rate = 1; u.volume = 0.6;
-  u.onend = () => { feedbackPlaying = false; if (listening && !waitingForTranslation && !waitingForQuestion && !waitingForPhoto) setStatus('🔒 대기 중...', true); };
-  speechSynthesis.speak(u);
+  setTimeout(() => {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US'; u.rate = 1; u.volume = 0.8;
+    const voices = speechSynthesis.getVoices();
+    const v = voices.find(v => v.lang.startsWith('en') && v.name.includes('Samantha'))
+      || voices.find(v => v.lang === 'en-US')
+      || voices.find(v => v.lang.startsWith('en'));
+    if (v) u.voice = v;
+    u.onend = () => { feedbackPlaying = false; if (listening && !waitingForTranslation && !waitingForQuestion && !waitingForPhoto) setStatus('🔒 대기 중...', true); };
+    u.onerror = () => { feedbackPlaying = false; };
+    speechSynthesis.speak(u);
+  }, 100);
 }
 
 // ---- TRANSLATE ----
